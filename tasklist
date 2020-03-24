@@ -1,0 +1,50 @@
+1. need to define the signal names and numbers associated with them
+2. need to have a table with info of default signal dispositions for every signal
+3. need to have the 5 default signal dispositions code : see "man 7 signal" example terminate, pause, core, etc.
+4. need to change struct proc to have support for signals
+5. need data structures for every process to deal with signals as follows:
+	blocked mask
+	pending mask
+	what action to take upon every signal
+6. need to write code for the kill and raise system calls
+7. need to add kill, raise, etc to syscall table or array
+8. need to add signal.c and signal.h to makefile so that they are compiled.
+9. need to make sure every process gets the default signal handlers without calling anything extra
+10. need to save context before a handler runs, and restore context after that handler has stopped running
+11. need to modify fork, exec to respectively inherit, and set to default the signal handlers.
+
+------------------------------------------------
+Will need to write from scratch these files : 
+signal.h
+	the definitions of signal names and related numbers
+	macros for default signal handlers
+	-kill and raise will be syscalls, their definitions needed (perhaps syscall.h)
+	
+signal.c
+	1) kill
+	2) raise
+	3) sigsetmask
+
+default_handlers.c
+	the five default handlers here
+	
+-------------------------------------------------	
+Will need to modify following file (at minimum):
+proc.h
+	-struct proc
+proc.c
+	-allocproc()
+	-wait()
+	-fork()
+	-exec()
+	
+trapasm.S
+	-perhaps alltraps
+trap.c
+	-trap()
+syscall.h
+syscall.c
+
+linking every process to default signal handler code
+	
+
