@@ -21,9 +21,10 @@ signal.h
 	-kill and raise will be syscalls, their definitions needed (perhaps syscall.h)
 	
 signal.c
-	1) kill
-	2) raise
-	3) sigsetmask
+	1) signal
+	2) kill
+	3) raise
+	4) sigsetmask
 
 default_handlers.c
 	the five default handlers here
