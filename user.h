@@ -23,12 +23,12 @@ int getpid(void);
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
-//111713007
+//111713007 for signal handling
 sighandler_t signal(int signum, sighandler_t handler);
 int Kill(pid_t pid, int sig);
 int raise(int sig);
-int siggetmask(uint mask);
-uint seggetmask(uint mask);
+uint sigsetmask(uint mask);
+uint siggetmask(void);
 
 
 // ulib.c

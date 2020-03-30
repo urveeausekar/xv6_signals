@@ -35,13 +35,14 @@ int def_disposition[32] = {0, TERM, TERM, CORE, CORE, 0, CORE, 0, CORE, TERM, TE
 
 #define NUMSIG 32 //maximum number of signals supported
 
+typedef int pid_t;
 
 typedef void (*sighandler_t)(int);
 
 
 struct signinfo {
   //int signum;		//number of the sent signal
-  int from_pid;		//signal sent by which process? Its pid
+  pid_t from_pid;	//signal sent by which process? Its pid
   uint from_ecx;	//ecx of the signal that sent the signal
 };
 

@@ -8,7 +8,7 @@
 #include "spinlock.h"
 
 
-struct {
+struct proctable{
   struct spinlock lock;
   struct proc proc[NPROC];
 } ptable;
@@ -316,6 +316,12 @@ wait(void)
         p->parent = 0;
         p->name[0] = 0;
         p->killed = 0;
+        //for signals
+        p->justwoken = 0;
+        p->sigblocked = 0;
+        p->sigpending = 0;
+        p->userdefed = 0;
+        
         p->state = UNUSED;
         release(&ptable.lock);
         return pid;

@@ -1,0 +1,14 @@
+signal mask:
+	The signal mask is represented by a 32 bit quantity where bit y stands for the signal numbered y. Bit 0 i.e 
+	the LSB is unused. If bit y is 1, then signal number y is masked, otherwise not masked.
+
+uint sigsetmask(uint mask);
+	-To mask signal y , user should first get the current mask using siggetmask, and then set the yth bit of the mask
+	 to 1. Here LSB is considered as bit 0 on the right side. This can be done by logical ORint the current mask with
+	 the current mask with a 32 bit quantity with all bits except the yth bit 0.
+	-Then the result of the logical OR should be given as argument to sigsetmask.
+	-The return value is the new mask.
+
+
+uint siggetmask();
+	-Returns the current signal mask.
