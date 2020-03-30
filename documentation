@@ -12,3 +12,14 @@ uint sigsetmask(uint mask);
 
 uint siggetmask();
 	-Returns the current signal mask.
+	
+	
+int Kill(pid_t pid, int sig):
+	-sends signal sig to process with id pid.
+	-User process is not permitted to signal a kernel process. Kill ignores the attempt and returns 0.
+	-If anyone tries to signal init, Kill ignores the attempt and returns 0.
+	-If pid is 0 or a negative number other than -1, Kill returns without doing anything, because xv6 doesn't have
+	 process groups.
+	-If signal is 0, no changes in proc of signalled of process, ie no signalling is actually done.
+	-If pid is -1, then every process that the sender is allowed to signal, is signalled.
+	

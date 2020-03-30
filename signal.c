@@ -1,5 +1,6 @@
 #include "proc.h"
 #include "spinlock.h"
+#include "mmu.h"
 
 extern struct proctable ptable;
 
@@ -73,22 +74,96 @@ int psig(struct proc *p)
 
 //---------------------------- CODE FOR SYSCALLS ----------------------------------
 
-sighandler_t signal(int signum, sighandler_t handler);
+sighandler_t 
+signal(int signum, sighandler_t handler)
+{
+	if(signum == 0)
+		return NULL;
+	
+	struct proc *p = myproc();
+	
+	acquire(&ptable.lock);
+	
+	if(handler == SIG_IGN)
+		p->allinfo[signum].disposition = SIG_IGN;
+	else if(handler == SIG_DFL)
+		p->allinfo[signum].disposition = SIG_DFL;
+	else{
+		p->allinfo[signum].disposition = SIG_USERDEF;
+		p->userdefed = p->sigblocked | (1 << signum);
+		p->allinfo[signum].handler = handler;
+	}
+		
+	release(&ptable.lock);
+}
 
 
+
+//In unix, we check user id, etc, but in xv6 no such distinctions - every process runs as root. 
+//Therefore forbid user processes from signalling kernel processes, and forbid everyone from signalling init.
 int 
 Kill(pid_t pid, int sig)
 {
-	if(pid == 1)
+	
+	if(pid == 1 || pid == 0 || pid < -1)
 	{
-		cprintf("Error : Operation not allowed\n");
+		cprintf("Operation not allowed\n");
 		return -1;
 	}
 	
-	/* if sig is sigkill, immediately set process to zombie
-	   first check if the sender has enough pl to send signals,  
+	int fd, receiver_pl = 10, sender_pl = 10;
+	struct proc *p, *curproc = myproc();
+	int minusone = 0;
 	
-	*/
+	if(pid == -1)
+		minusone = 1;
+	
+	//search for pid in table
+	for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    
+    if(p->pid == 1)
+    	continue;
+    	
+    if(minusone || p->pid == pid){
+    	//check privilege level
+    	receiver_pl = p->tf->cs & DPL_USER;
+    	sender_pl = curproc->tf->cs & DPL_USER;
+    	if(receiver_pl != 3 && sender_pl == 3){
+    		if(minusone)
+    			continue
+    		else
+    			return 0;
+    	}
+    	
+    	//if sig is sigkill, immediately set process to zombie
+			//SIGKILL is generated under some unusual conditions where the program cannot possibly continue to run,
+			//(even to run a signal handler), so terminate it here instead of waiting for sigkilled process to run.
+			
+			acquire(&ptable.lock);
+			
+    	if(sig == SIGKILL){
+    		p->state = ZOMBIE;
+    		p->killed = 1;
+    		
+    		release(&ptable.lock);
+    		if(minusone)
+    			continue
+    		else
+    			return 0;
+    	}
+    	
+    	if(p->handlerinfo[sig].disposition != SIG_IGN && sig != 0)
+    		p->sigpending = p->sigpending | (1 << sig);
+    	
+    	release(&ptable.lock);
+    	if(minusone == 0)
+    		break;
+    		
+    	
+    }
+	}
+	
+	
 }
 
 
