@@ -370,7 +370,7 @@ scheduler(void)
       c->proc = p;
       switchuvm(p);
       p->state = RUNNING;
-
+    		
       swtch(&(c->scheduler), p->context);
       switchkvm();
 
@@ -463,12 +463,16 @@ sleep(void *chan, struct spinlock *lk)
     acquire(&ptable.lock);  //DOC: sleeplock1
     release(lk);
   }
+  
+  //Check if any signals pending. If yes, deal with them
+	//if(issig(p))
+	//	psig(p);
   // Go to sleep.
   p->chan = chan;
   p->state = SLEEPING;
-
+  
   sched();
-
+	
   // Tidy up.
   p->chan = 0;
 
@@ -488,8 +492,11 @@ wakeup1(void *chan)
   struct proc *p;
 
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-    if(p->state == SLEEPING && p->chan == chan)
+    if(p->state == SLEEPING && p->chan == chan){
       p->state = RUNNABLE;
+      p->justwoken = 1;
+      
+    }
 }
 
 // Wake up all processes sleeping on chan.

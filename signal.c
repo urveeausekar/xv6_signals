@@ -4,9 +4,17 @@
 
 extern struct proctable ptable;
 
+
+void
+checkforsignals(struct proc *p)
+{
+	if(issig(p))
+		psig(p);
+}
+
 int issig(struct proc *p)
 {
-  return p->sigpending; 
+  return p->sigpending & (!p->sigblocked); 
 }
 
 
@@ -18,17 +26,19 @@ ign()
 }
 
 int 
-core(struc proc *q)
+core(struc proc *q, , int * done;)
 {
-	//procdump();
-	//dump core here. find a way
+	procdump();
+	//FIXME : dump core here. find a way
 	kill(q->pid);
+	*done = 1;
 }
 
 int 
-term(struc proc *q)
+term(struc proc *q, int * done)
 {
   kill(q->pid);
+  *done = 1;
 }
 
 int 
@@ -41,15 +51,22 @@ cont(struc proc *q)
     	if(p->state == SLEEPING)
     	{
     		p->state = RUNNABLE;
+    		p->justwoken = 1;
     	}
     	break;
     }
 }
 
 int 
-stop(struc proc *q)
+stop(struc proc *q, , int * done;)
 {
-	q->state = SLEEPING;
+  acquire(&ptable.lock);
+	
+  q->state = SLEEPING;
+  sched();
+  
+  release(&ptable.lock);
+  *done = 1;
 }
 
 
@@ -57,13 +74,81 @@ stop(struc proc *q)
 
 int psig(struct proc *p)
 {
-  if(p->sigpending & 1 << 9 == 1 << 9)
-  {
-    p->sigpending = p->sigpending
-    kill(p->pid);
+  int i;
+  
+  int stopsig[4] = {19, 20, 21, 22};
+  int coresig[5] = {SIGQUIT, SIGABRT, SIGILL, SIGFPE, SIGSEGV};
+  int termsig[7] = {SIGHUP, SIGINT, SIGPIPE, SIGALRM, SIGTERM, SIGUSR1, SIGUSR2};
+  int termcalled = 0, corecalled = 0, stopcalled = 0;
+  
+  //first deal with all the terms. No logic in doing other things if process is going to get terminated.
+  
+  for(i = 0; i < 7; i++){
+  	if((p->sigpending & (1 << termsig[i]) == (1 << termsig[i])) && (p->sigblocked & (1 << termsig[i]) == 0) && p->allinfo[termsig[i]].disposition == SIG_DFL){
+  		if(termcalled == 0)
+  			term(p, &termcalled);
+  		p->sigpending = p->sigpending & (! (1 << termsig[i]));
+  	}
   }
-  else if(p->sigpending & 1 << 18 == 1 << 18)
-    //nope write functions first
+  
+  
+  //If default action is dumping a core and terminating
+  for(i = 0; i < ; i++){
+  	if((p->sigpending & (1 << coresig[i]) == (1 << coresig[i])) && (p->sigblocked & (1 << coresig[i]) == 0) && p->allinfo[coresig[i]].disposition == SIG_DFL){
+  		if(corecalled == 0)
+  			term(p, &corecalled);
+  		p->sigpending = p->sigpending & (! (1 << coresig[i]));
+  	}
+  }
+  
+  
+  
+  
+  
+  //SIGSTOP can't be masked, ignored or handled
+  if(p->sigpending & (1 << 19) == (1 << 19))
+  {
+    stop(p);
+    p->sigpending = p->sigpending & (! (1 << 19));
+  }
+  
+  
+  if((p->sigpending & (1 << 17) == (1 << 17)) && (p->sigblocked & (1 << 17) == 0) && p->allinfo[SIGCHLD].disposition == SIG_DFL){
+  	ign();
+  	p->sigpending = p->sigpending & (! (1 << 17));
+  }
+  
+  
+  //1 SIGCONT and 1 other signal that causes a stop cancel each other out
+  for(i = 0; i < 4 ; i++){
+  	if((p->sigpending & (1 << stopsig[i]) == (1 << stopsig[i])) && (p->sigblocked & (1 << stopsig[i]) == 0) && p->allinfo[stopsig[i]].disposition == SIG_DFL && (p->sigpending & (1 << 18) == (1 << 18)) && (p->sigblocked & (1 << 18) == 0) && p->allinfo[SIGCONT].disposition == SIG_DFL){
+  		
+  		p->sigpending = p->sigpending & (! (1 << 18));
+  		p->sigpending = p->sigpending & (! (1 << stopsig[i]));
+  	}
+  	else if ((p->sigpending & (1 << stopsig[i]) == (1 << stopsig[i])) && (p->sigblocked & (1 << stopsig[i]) == 0) && p->allinfo[stopsig[i]].disposition == SIG_DFL){
+  		// i.e no sigcont, only a signal which causes a stop
+  		if(stopcalled == 0)
+  			stop(p, &stopcalled);
+  		p->sigpending = p->sigpending & (! (1 << stopsig[i]));
+  	}
+  }
+  
+  //If there is only a sigcont
+  if((p->sigpending & (1 << 18) == (1 << 18)) && (p->sigblocked & (1 << 18) == 0) && p->allinfo[SIGCONT].disposition == SIG_DFL){
+  	cont(p);
+  	p->sigpending = p->sigpending & (! (1 << 18));
+  }
+  
+  
+  //Now if signals are userdefined.
+  if(p->userdefed == 0)
+  	return 1;
+  else{
+  	
+  }
+ 
+ 
 }
 
 
