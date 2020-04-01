@@ -12,6 +12,12 @@ checkforsignals(struct proc *p)
 		psig(p);
 }
 
+int
+sendsig(struct proc *p, int signum)
+{
+
+}
+
 int issig(struct proc *p)
 {
   return p->sigpending & (!p->sigblocked); 
@@ -74,7 +80,7 @@ stop(struc proc *q, , int * done;)
 
 int psig(struct proc *p)
 {
-  int i;
+  int i, esp, ss, eax, ebx, ecx, eds, esi, edi, ebp, cs, ds, es, fs, gs, eip, eflag;
   
   int stopsig[4] = {19, 20, 21, 22};
   int coresig[5] = {SIGQUIT, SIGABRT, SIGILL, SIGFPE, SIGSEGV};
@@ -145,7 +151,61 @@ int psig(struct proc *p)
   if(p->userdefed == 0)
   	return 1;
   else{
+  	for(i = 1; i < 32; i++){
+  		if(p->userdefed & (1 << i) == (1 << i)
+  			break;		//i is the signal number that is pending
+  	}
+  	// asm volatile("movl $0, %0" : "+m" (lk->locked) : ); example asm usage
+  	asm volatile ("movl %%esp, %0" : "=r"(esp) : );
+  	asm volatile ("movl %%ss, %0" : "=r"(ss) : );
+  	asm volatile ("movl %%cs, %0" : "=r"(cs) : );
+  	asm volatile ("movl %%ds, %0" : "=r"(ds) : );
+  	asm volatile ("movl %%es, %0" : "=r"(es) : );
+  	asm volatile ("movl %%eax, %0" : "=r"(eax) : );
+  	asm volatile ("movl %%ebx, %0" : "=r"(ebx) : );
+  	asm volatile ("movl %%ecx, %0" : "=r"(ecx) : );
+  	asm volatile ("movl %%edx, %0" : "=r"(edx) : );
+  	asm volatile ("movl %%esi, %0" : "=r"(esi) : );
+  	asm volatile ("movl %%edi, %0" : "=r"(edi) : );
+  	asm volatile ("movl %%ebp, %0" : "=r"(ebp) : );
+  	asm volatile ("movl %%fs, %0" : "=r"(fs) : );
+  	asm volatile ("movl %%gs, %0" : "=r"(gs) : );
+  	asm volatile ("movl %%eflag, %0" : "=r"(eflag) : );
+  	asm volatile ("movl %%eip, %0" : "=r"(eip) : );
   	
+  	*((p->tf->esp) - 4) = ss;
+  	*((p->tf->esp) - 8) = esp;
+  	*((p->tf->esp) - 12) = eflag;
+  	*((p->tf->esp) - 16) = cs;
+  	*((p->tf->esp) - 20) = eip;
+  	*((p->tf->esp) - 24) = ds;
+  	*((p->tf->esp) - 28) = es;
+  	*((p->tf->esp) - 32) = fs;
+  	*((p->tf->esp) - 36) = gs;
+  	*((p->tf->esp) - 40) = eax;
+  	*((p->tf->esp) - 44) = ecx;
+  	*((p->tf->esp) - 48) = edx;
+  	*((p->tf->esp) - 52) = ebx;
+  	*((p->tf->esp) - 56) = esp;
+  	*((p->tf->esp) - 60) = ebp;
+  	*((p->tf->esp) - 64) = esi;
+  	*((p->tf->esp) - 68) = edi;
+  	//context of kernel saved on user stack
+  	
+  	*((p->tf->esp) - 72) = i;
+  	*((p->tf->esp) - 76) = sigreturn;
+  	
+  	asm volatile ("movl %0, %%esp" : :((p->tf->esp) - 76));
+  	asm volatile ("movw %0, %%ss" : :(p->tf->ss));
+  	asm volatile ("movl %%eip, %0" : "=r"(eip) : );
+  	*((p->tf->esp) - 20) = eip;
+  	
+  	asm volatile ("movl %0, %%eip" : : (p->allinfo[i].handler));
+  	
+  	
+  	
+  	p->userdefed = p->userdefed & (! (1 << i));
+  	p->sigpending = p->sigpending & (! (1 << i));
   }
  
  
