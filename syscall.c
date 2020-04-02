@@ -104,12 +104,13 @@ extern int sys_wait(void);
 extern int sys_write(void);
 extern int sys_uptime(void);
 
-//111713007
+//111713007 : for signals 
 extern int sys_Kill(void);
 extern int sys_signal(void);
 extern int sys_sigsetmask(void);
 extern int sys_raise(void);
 extern int sys_siggetmask(void);
+extern int sys_sigreturn(void);
 
 static int (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
@@ -138,6 +139,7 @@ static int (*syscalls[])(void) = {
 [SYS_sigsetmask]  sys_sigsetmask,
 [SYS_raise]   sys_raise,
 [SYS_siggetmask]  sys_siggetmask,
+[SYS_sigreturn]   sys_sigreturn,
 };
 
 void

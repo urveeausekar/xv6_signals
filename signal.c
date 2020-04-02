@@ -12,11 +12,7 @@ checkforsignals(struct proc *p)
 		psig(p);
 }
 
-int
-sendsig(struct proc *p, int signum)
-{
 
-}
 
 int issig(struct proc *p)
 {
@@ -148,67 +144,80 @@ int psig(struct proc *p)
   
   
   //Now if signals are userdefined.
-  if(p->userdefed == 0)
-  	return 1;
-  else{
-  	for(i = 1; i < 32; i++){
-  		if(p->userdefed & (1 << i) == (1 << i)
-  			break;		//i is the signal number that is pending
-  	}
-  	// asm volatile("movl $0, %0" : "+m" (lk->locked) : ); example asm usage
-  	asm volatile ("movl %%esp, %0" : "=r"(esp) : );
-  	asm volatile ("movl %%ss, %0" : "=r"(ss) : );
-  	asm volatile ("movl %%cs, %0" : "=r"(cs) : );
-  	asm volatile ("movl %%ds, %0" : "=r"(ds) : );
-  	asm volatile ("movl %%es, %0" : "=r"(es) : );
-  	asm volatile ("movl %%eax, %0" : "=r"(eax) : );
-  	asm volatile ("movl %%ebx, %0" : "=r"(ebx) : );
-  	asm volatile ("movl %%ecx, %0" : "=r"(ecx) : );
-  	asm volatile ("movl %%edx, %0" : "=r"(edx) : );
-  	asm volatile ("movl %%esi, %0" : "=r"(esi) : );
-  	asm volatile ("movl %%edi, %0" : "=r"(edi) : );
-  	asm volatile ("movl %%ebp, %0" : "=r"(ebp) : );
-  	asm volatile ("movl %%fs, %0" : "=r"(fs) : );
-  	asm volatile ("movl %%gs, %0" : "=r"(gs) : );
-  	asm volatile ("movl %%eflag, %0" : "=r"(eflag) : );
-  	asm volatile ("movl %%eip, %0" : "=r"(eip) : );
-  	
-  	*((p->tf->esp) - 4) = ss;
-  	*((p->tf->esp) - 8) = esp;
-  	*((p->tf->esp) - 12) = eflag;
-  	*((p->tf->esp) - 16) = cs;
-  	*((p->tf->esp) - 20) = eip;
-  	*((p->tf->esp) - 24) = ds;
-  	*((p->tf->esp) - 28) = es;
-  	*((p->tf->esp) - 32) = fs;
-  	*((p->tf->esp) - 36) = gs;
-  	*((p->tf->esp) - 40) = eax;
-  	*((p->tf->esp) - 44) = ecx;
-  	*((p->tf->esp) - 48) = edx;
-  	*((p->tf->esp) - 52) = ebx;
-  	*((p->tf->esp) - 56) = esp;
-  	*((p->tf->esp) - 60) = ebp;
-  	*((p->tf->esp) - 64) = esi;
-  	*((p->tf->esp) - 68) = edi;
-  	//context of kernel saved on user stack
-  	
-  	*((p->tf->esp) - 72) = i;
-  	*((p->tf->esp) - 76) = sigreturn;
-  	
-  	asm volatile ("movl %0, %%esp" : :((p->tf->esp) - 76));
-  	asm volatile ("movw %0, %%ss" : :(p->tf->ss));
-  	asm volatile ("movl %%eip, %0" : "=r"(eip) : );
-  	*((p->tf->esp) - 20) = eip;
-  	
-  	asm volatile ("movl %0, %%eip" : : (p->allinfo[i].handler));
-  	
-  	
-  	
-  	p->userdefed = p->userdefed & (! (1 << i));
-  	p->sigpending = p->sigpending & (! (1 << i));
-  }
+	if(p->userdefed == 0)
+		return 1;
+	else{
+		for(i = 1; i < 32; i++){
+			if(p->userdefed & (1 << i) == (1 << i)
+				break;		//i is the signal number that is pending
+		}
+	// asm volatile("movl $0, %0" : "+m" (lk->locked) : ); example asm usage
+	/*asm volatile ("movl %%esp, %0" : "=r"(esp) : );
+	asm volatile ("movl %%ss, %0" : "=r"(ss) : );
+	asm volatile ("movl %%cs, %0" : "=r"(cs) : );
+	asm volatile ("movl %%ds, %0" : "=r"(ds) : );
+	asm volatile ("movl %%es, %0" : "=r"(es) : );
+	asm volatile ("movl %%eax, %0" : "=r"(eax) : );
+	asm volatile ("movl %%ebx, %0" : "=r"(ebx) : );
+	asm volatile ("movl %%ecx, %0" : "=r"(ecx) : );
+	asm volatile ("movl %%edx, %0" : "=r"(edx) : );
+	asm volatile ("movl %%esi, %0" : "=r"(esi) : );
+	asm volatile ("movl %%edi, %0" : "=r"(edi) : );
+	asm volatile ("movl %%ebp, %0" : "=r"(ebp) : );
+	asm volatile ("movl %%fs, %0" : "=r"(fs) : );
+	asm volatile ("movl %%gs, %0" : "=r"(gs) : );
+	asm volatile ("movl %%eflag, %0" : "=r"(eflag) : );
+	asm volatile ("movl %%eip, %0" : "=r"(eip) : );*/
+
+	*((p->tf->esp) - 4) = p->tf->eflag;
+	*((p->tf->esp) - 8) = p->tf->cs;
+	*((p->tf->esp) - 12) = p->tf->eip;
+	*((p->tf->esp) - 16) = p->tf->ds;
+	*((p->tf->esp) - 20) = p->tf->es;
+	*((p->tf->esp) - 24) = p->tf->fs;
+	*((p->tf->esp) - 28) = p->tf->gs;
+	*((p->tf->esp) - 32) = p->tf->eax;
+	*((p->tf->esp) - 36) = p->tf->ecx;
+	*((p->tf->esp) - 40) = p->tf->edx;
+	*((p->tf->esp) - 44) = p->tf->ebx;
+	*((p->tf->esp) - 48) = p->tf->esp;
+	*((p->tf->esp) - 52) = p->tf->ebp;
+	*((p->tf->esp) - 56) = p->tf->esi;
+	*((p->tf->esp) - 60) = p->tf->edi;
+	//*((p->tf->esp) - 64) = p->tf->esi;
+	//*((p->tf->esp) - 68) = p->tf->edi;
+	//context of kernel saved on user stack
+
+	*((p->tf->esp) - 64) = i;
+	*((p->tf->esp) - 68) = sigreturn; //check this
+
+	asm volatile ("movl %0, %%esp" : :((p->tf->esp) - 68));  //switch to user's stack
+	asm volatile ("movw %0, %%ss" : :(p->tf->ss));		//switch to user ss
+	asm volatile ("movl %0, %%cs" : : (p->tf->cs));
+	/*asm volatile ("movl %%eip, %0" : "=r"(eip) : );
+	*((p->tf->esp) - 20) = eip;*/
+
+	asm volatile ("movl %0, %%eip" : : (p->allinfo[i].handler)); //start running handler
+
+
+
+
+	}
+
  
- 
+}
+
+
+// Code for the syscalls that the user will call.
+
+void
+kernel_sigreturn(int signal)
+{
+	struct proc *p = myproc();
+	p->userdefed = p->userdefed & (! (1 << signal));
+  	p->sigpending = p->sigpending & (! (1 << signal));
+  	int esp = p->tf->esp, ss = p->tf->ss;
+  	restoreuser(ss, esp);
 }
 
 
@@ -216,14 +225,11 @@ int psig(struct proc *p)
 
 
 
-
-//---------------------------- CODE FOR SYSCALLS ----------------------------------
-
-sighandler_t 
+int
 signal(int signum, sighandler_t handler)
 {
 	if(signum == 0)
-		return NULL;
+		return -1;
 	
 	struct proc *p = myproc();
 	
@@ -240,6 +246,7 @@ signal(int signum, sighandler_t handler)
 	}
 		
 	release(&ptable.lock);
+	return 0;
 }
 
 
@@ -266,47 +273,48 @@ Kill(pid_t pid, int sig)
 	//search for pid in table
 	for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     
-    if(p->pid == 1)
-    	continue;
+		if(p->pid == 1)
+    			continue;
     	
-    if(minusone || p->pid == pid){
+		if(minusone || p->pid == pid){
     	//check privilege level
-    	receiver_pl = p->tf->cs & DPL_USER;
-    	sender_pl = curproc->tf->cs & DPL_USER;
-    	if(receiver_pl != 3 && sender_pl == 3){
-    		if(minusone)
-    			continue
-    		else
-    			return 0;
-    	}
+			receiver_pl = p->tf->cs & DPL_USER;
+			sender_pl = curproc->tf->cs & DPL_USER;
+			if(receiver_pl != 3 && sender_pl == 3){
+				if(minusone)
+					continue
+				else
+					return 0;
+			}
     	
-    	//if sig is sigkill, immediately set process to zombie
+	    		//if sig is sigkill, immediately set process to zombie
 			//SIGKILL is generated under some unusual conditions where the program cannot possibly continue to run,
 			//(even to run a signal handler), so terminate it here instead of waiting for sigkilled process to run.
-			
+				
 			acquire(&ptable.lock);
 			
-    	if(sig == SIGKILL){
-    		p->state = ZOMBIE;
-    		p->killed = 1;
+			if(sig == SIGKILL){
+				p->state = ZOMBIE;
+				p->killed = 1;
+				
+				release(&ptable.lock);
+				if(minusone)
+					continue
+				else
+					return 0;
+			}
+	    	
+			if(p->handlerinfo[sig].disposition != SIG_IGN && sig != 0)
+				p->sigpending = p->sigpending | (1 << sig);
+
+			release(&ptable.lock);
+			if(minusone == 0)
+				break;
     		
-    		release(&ptable.lock);
-    		if(minusone)
-    			continue
-    		else
-    			return 0;
-    	}
     	
-    	if(p->handlerinfo[sig].disposition != SIG_IGN && sig != 0)
-    		p->sigpending = p->sigpending | (1 << sig);
-    	
-    	release(&ptable.lock);
-    	if(minusone == 0)
-    		break;
-    		
-    	
-    }
+		}
 	}
+	return 0;
 	
 	
 }
@@ -315,7 +323,7 @@ Kill(pid_t pid, int sig)
 int raise(int sig)
 {
 	struct proc *p = myproc();
-	Kill(p->pid, sig);
+	return Kill(p->pid, sig);
 	//FIXME : If the signal causes a handler to be called, raise() will  return  only after the signal handler has returned.
 
 }

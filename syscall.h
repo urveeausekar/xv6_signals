@@ -26,3 +26,4 @@
 #define SYS_sigsetmask  24
 #define SYS_raise  25
 #define SYS_siggetmask  26
+#define SYS_sigreturn   27

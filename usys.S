@@ -35,4 +35,4 @@ SYSCALL(Kill)
 SYSCALL(raise)
 SYSCALL(sigsetmask)
 SYSCALL(siggetmask)
-
+SYSCALL(sigreturn)
