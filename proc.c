@@ -7,11 +7,13 @@
 #include "proc.h"
 #include "spinlock.h"
 
-
 struct proctable{
   struct spinlock lock;
   struct proc proc[NPROC];
-} ptable;
+};
+
+
+struct proctable ptable;
 
 static struct proc *initproc;
 
@@ -138,7 +140,7 @@ userinit(void)
   for(i = 0; i < NUMSIG; i++)
   {
     p->allinfo[i].disposition = SIG_DFL;
-    p->allinfo[i].handler = def_disposition[i];
+    //p->allinfo[i].handler = def_disposition[i]; not necessary
   }
   
   initproc = p;

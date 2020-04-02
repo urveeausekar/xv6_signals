@@ -1,6 +1,19 @@
+#include "types.h"
+#include "defs.h"
+#include "param.h"
+#include "memlayout.h"
+#include "mmu.h"
+#include "x86.h"
 #include "proc.h"
 #include "spinlock.h"
-#include "mmu.h"
+
+
+struct proctable{
+  struct spinlock lock;
+  struct proc proc[NPROC];
+};
+
+extern sighandler_t sigreturn;
 
 extern struct proctable ptable;
 
@@ -21,46 +34,45 @@ int issig(struct proc *p)
 
 
 
-int inline 
-ign()
+int
+ign(void)
 {
-	//do nothing
+	return 0;
 }
 
-int 
-core(struc proc *q, , int * done;)
+void
+core(struct proc *p, int * done)
 {
 	procdump();
-	//FIXME : dump core here. find a way
-	kill(q->pid);
+	kill(p->pid);
 	*done = 1;
 }
 
-int 
-term(struc proc *q, int * done)
+void
+term(struct proc *q, int * done)
 {
   kill(q->pid);
   *done = 1;
 }
 
-int 
-cont(struc proc *q)
+void
+cont(struct proc *q)
 {
-	struct proc p;
+	struct proc *p;
 	for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-    if(p->pid == q->pid)
-    {
-    	if(p->state == SLEEPING)
-    	{
-    		p->state = RUNNABLE;
-    		p->justwoken = 1;
-    	}
-    	break;
-    }
+		if(p->pid == q->pid)
+		{
+			if(p->state == SLEEPING)
+			{
+				p->state = RUNNABLE;
+				p->justwoken = 1;
+			}
+			break;
+		}
 }
 
-int 
-stop(struc proc *q, , int * done;)
+void
+stop(struct proc *q, int *done)
 {
   acquire(&ptable.lock);
 	
@@ -76,7 +88,7 @@ stop(struc proc *q, , int * done;)
 
 int psig(struct proc *p)
 {
-  int i, esp, ss, eax, ebx, ecx, eds, esi, edi, ebp, cs, ds, es, fs, gs, eip, eflag;
+  int i;
   
   int stopsig[4] = {19, 20, 21, 22};
   int coresig[5] = {SIGQUIT, SIGABRT, SIGILL, SIGFPE, SIGSEGV};
@@ -86,7 +98,7 @@ int psig(struct proc *p)
   //first deal with all the terms. No logic in doing other things if process is going to get terminated.
   
   for(i = 0; i < 7; i++){
-  	if((p->sigpending & (1 << termsig[i]) == (1 << termsig[i])) && (p->sigblocked & (1 << termsig[i]) == 0) && p->allinfo[termsig[i]].disposition == SIG_DFL){
+  	if(((p->sigpending & (1 << termsig[i])) == (1 << termsig[i])) && ((p->sigblocked & (1 << termsig[i])) == 0) && p->allinfo[termsig[i]].disposition == SIG_DFL){
   		if(termcalled == 0)
   			term(p, &termcalled);
   		p->sigpending = p->sigpending & (! (1 << termsig[i]));
@@ -95,8 +107,8 @@ int psig(struct proc *p)
   
   
   //If default action is dumping a core and terminating
-  for(i = 0; i < ; i++){
-  	if((p->sigpending & (1 << coresig[i]) == (1 << coresig[i])) && (p->sigblocked & (1 << coresig[i]) == 0) && p->allinfo[coresig[i]].disposition == SIG_DFL){
+  for(i = 0; i < 5; i++){
+  	if(((p->sigpending & (1 << coresig[i])) == (1 << coresig[i])) && ((p->sigblocked & (1 << coresig[i])) == 0) && p->allinfo[coresig[i]].disposition == SIG_DFL){
   		if(corecalled == 0)
   			term(p, &corecalled);
   		p->sigpending = p->sigpending & (! (1 << coresig[i]));
@@ -108,14 +120,14 @@ int psig(struct proc *p)
   
   
   //SIGSTOP can't be masked, ignored or handled
-  if(p->sigpending & (1 << 19) == (1 << 19))
-  {
-    stop(p);
+  if((p->sigpending & (1 << 19)) == (1 << 19))
+  {	
+    stop(p, &stopcalled);
     p->sigpending = p->sigpending & (! (1 << 19));
   }
   
   
-  if((p->sigpending & (1 << 17) == (1 << 17)) && (p->sigblocked & (1 << 17) == 0) && p->allinfo[SIGCHLD].disposition == SIG_DFL){
+  if(((p->sigpending & (1 << 17)) == (1 << 17)) && ((p->sigblocked & (1 << 17)) == 0) && p->allinfo[SIGCHLD].disposition == SIG_DFL){
   	ign();
   	p->sigpending = p->sigpending & (! (1 << 17));
   }
@@ -123,12 +135,12 @@ int psig(struct proc *p)
   
   //1 SIGCONT and 1 other signal that causes a stop cancel each other out
   for(i = 0; i < 4 ; i++){
-  	if((p->sigpending & (1 << stopsig[i]) == (1 << stopsig[i])) && (p->sigblocked & (1 << stopsig[i]) == 0) && p->allinfo[stopsig[i]].disposition == SIG_DFL && (p->sigpending & (1 << 18) == (1 << 18)) && (p->sigblocked & (1 << 18) == 0) && p->allinfo[SIGCONT].disposition == SIG_DFL){
+  	if(((p->sigpending & (1 << stopsig[i])) == (1 << stopsig[i])) && ((p->sigblocked & (1 << stopsig[i])) == 0) && p->allinfo[stopsig[i]].disposition == SIG_DFL && ((p->sigpending & (1 << 18)) == (1 << 18)) && ((p->sigblocked & (1 << 18)) == 0) && p->allinfo[SIGCONT].disposition == SIG_DFL){
   		
   		p->sigpending = p->sigpending & (! (1 << 18));
   		p->sigpending = p->sigpending & (! (1 << stopsig[i]));
   	}
-  	else if ((p->sigpending & (1 << stopsig[i]) == (1 << stopsig[i])) && (p->sigblocked & (1 << stopsig[i]) == 0) && p->allinfo[stopsig[i]].disposition == SIG_DFL){
+  	else if (((p->sigpending & (1 << stopsig[i])) == (1 << stopsig[i])) && ((p->sigblocked & (1 << stopsig[i])) == 0) && p->allinfo[stopsig[i]].disposition == SIG_DFL){
   		// i.e no sigcont, only a signal which causes a stop
   		if(stopcalled == 0)
   			stop(p, &stopcalled);
@@ -137,7 +149,7 @@ int psig(struct proc *p)
   }
   
   //If there is only a sigcont
-  if((p->sigpending & (1 << 18) == (1 << 18)) && (p->sigblocked & (1 << 18) == 0) && p->allinfo[SIGCONT].disposition == SIG_DFL){
+  if(((p->sigpending & (1 << 18)) == (1 << 18)) && ((p->sigblocked & (1 << 18)) == 0) && p->allinfo[SIGCONT].disposition == SIG_DFL){
   	cont(p);
   	p->sigpending = p->sigpending & (! (1 << 18));
   }
@@ -148,7 +160,7 @@ int psig(struct proc *p)
 		return 1;
 	else{
 		for(i = 1; i < 32; i++){
-			if(p->userdefed & (1 << i) == (1 << i)
+			if((p->userdefed & (1 << i)) == (1 << i))
 				break;		//i is the signal number that is pending
 		}
 	// asm volatile("movl $0, %0" : "+m" (lk->locked) : ); example asm usage
@@ -169,40 +181,51 @@ int psig(struct proc *p)
 	asm volatile ("movl %%eflag, %0" : "=r"(eflag) : );
 	asm volatile ("movl %%eip, %0" : "=r"(eip) : );*/
 
-	*((p->tf->esp) - 4) = p->tf->eflag;
-	*((p->tf->esp) - 8) = p->tf->cs;
-	*((p->tf->esp) - 12) = p->tf->eip;
-	*((p->tf->esp) - 16) = p->tf->ds;
-	*((p->tf->esp) - 20) = p->tf->es;
-	*((p->tf->esp) - 24) = p->tf->fs;
-	*((p->tf->esp) - 28) = p->tf->gs;
-	*((p->tf->esp) - 32) = p->tf->eax;
-	*((p->tf->esp) - 36) = p->tf->ecx;
-	*((p->tf->esp) - 40) = p->tf->edx;
-	*((p->tf->esp) - 44) = p->tf->ebx;
-	*((p->tf->esp) - 48) = p->tf->esp;
-	*((p->tf->esp) - 52) = p->tf->ebp;
-	*((p->tf->esp) - 56) = p->tf->esi;
-	*((p->tf->esp) - 60) = p->tf->edi;
+	*(uint *)((p->tf->esp) - 4) = p->tf->eflags;
+	*(uint *)((p->tf->esp) - 8) = p->tf->cs;
+	*(uint *)((p->tf->esp) - 12) = p->tf->eip;
+	*(uint *)((p->tf->esp) - 16) = p->tf->ds;
+	*(uint *)((p->tf->esp) - 20) = p->tf->es;
+	*(uint *)((p->tf->esp) - 24) = p->tf->fs;
+	*(uint *)((p->tf->esp) - 28) = p->tf->gs;
+	*(uint *)((p->tf->esp) - 32) = p->tf->eax;
+	*(uint *)((p->tf->esp) - 36) = p->tf->ecx;
+	*(uint *)((p->tf->esp) - 40) = p->tf->edx;
+	*(uint *)((p->tf->esp) - 44) = p->tf->ebx;
+	*(uint *)((p->tf->esp) - 48) = p->tf->esp;
+	*(uint *)((p->tf->esp) - 52) = p->tf->ebp;
+	*(uint *)((p->tf->esp) - 56) = p->tf->esi;
+	*(uint *)((p->tf->esp) - 60) = p->tf->edi;
 	//*((p->tf->esp) - 64) = p->tf->esi;
 	//*((p->tf->esp) - 68) = p->tf->edi;
 	//context of kernel saved on user stack
 
-	*((p->tf->esp) - 64) = i;
-	*((p->tf->esp) - 68) = sigreturn; //check this
+	*(uint *)((p->tf->esp) - 64) = i;
+	*(uint *)((p->tf->esp) - 68) = sigreturn; //check this
 
-	asm volatile ("movl %0, %%esp" : :((p->tf->esp) - 68));  //switch to user's stack
-	asm volatile ("movw %0, %%ss" : :(p->tf->ss));		//switch to user ss
-	asm volatile ("movl %0, %%cs" : : (p->tf->cs));
-	/*asm volatile ("movl %%eip, %0" : "=r"(eip) : );
-	*((p->tf->esp) - 20) = eip;*/
+	/*asm volatile ("movl %0, %%esp" : :"m"(p->tf->esp));  //switch to user's stack
+	asm volatile ("subl $68, %%esp" : : );
+	asm volatile ("movw %0, %%ss" : :"m"(p->tf->ss));		//switch to user ss
+	asm volatile ("movl %0, %%cs" : :"m" (p->tf->cs));
+	// asm volatile ("movl %%eip, %0" : "=r"(eip) : );
+	// *((p->tf->esp) - 20) = eip;
 
-	asm volatile ("movl %0, %%eip" : : (p->allinfo[i].handler)); //start running handler
+	asm volatile ("movl %0, %%eip" : :"m" (p->allinfo[i].handler)); //start running handler
 
-
+	*/
+	//Now we push to current stack things so that iret takes us back to level3
+	p->tf->esp = p->tf->esp - 68;
+	asm volatile("pushl %0" : :"m"(p->tf->ss));
+	asm volatile("pushl %0" : :"m"(p->tf->esp));
+	asm volatile("pushl %0" : :"m"(p->tf->eflags));
+	asm volatile("pushl %0" : :"m"(p->tf->cs));
+	asm volatile("pushl %0" : :"m"(p->allinfo[i].handler));
+	asm volatile("iret" : : );
 
 
 	}
+	//won't reach here. But still.
+	return 0;
 
  
 }
@@ -235,7 +258,7 @@ signal(int signum, sighandler_t handler)
 	
 	acquire(&ptable.lock);
 	
-	if(handler == SIG_IGN)
+	if(handler == (void *)SIG_IGN)
 		p->allinfo[signum].disposition = SIG_IGN;
 	else if(handler == SIG_DFL)
 		p->allinfo[signum].disposition = SIG_DFL;
@@ -263,7 +286,7 @@ Kill(pid_t pid, int sig)
 		return -1;
 	}
 	
-	int fd, receiver_pl = 10, sender_pl = 10;
+	int receiver_pl = 10, sender_pl = 10;
 	struct proc *p, *curproc = myproc();
 	int minusone = 0;
 	
@@ -282,7 +305,7 @@ Kill(pid_t pid, int sig)
 			sender_pl = curproc->tf->cs & DPL_USER;
 			if(receiver_pl != 3 && sender_pl == 3){
 				if(minusone)
-					continue
+					continue;
 				else
 					return 0;
 			}
@@ -299,12 +322,12 @@ Kill(pid_t pid, int sig)
 				
 				release(&ptable.lock);
 				if(minusone)
-					continue
+					continue;
 				else
 					return 0;
 			}
 	    	
-			if(p->handlerinfo[sig].disposition != SIG_IGN && sig != 0)
+			if(p->allinfo[sig].disposition != SIG_IGN && sig != 0)
 				p->sigpending = p->sigpending | (1 << sig);
 
 			release(&ptable.lock);

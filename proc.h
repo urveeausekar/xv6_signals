@@ -1,5 +1,6 @@
 #include"signal.h"
 
+
 // Per-CPU state
 
 struct cpu {
@@ -59,8 +60,8 @@ struct proc {
   uint sigpending;             // pending signals. Every bit stands for 1 signal
   uint sigblocked;             // blocked signals (by the process)
   uint userdefed;	       // signals for which user has defined the handler
-  struct siginfo pending_info[NUMSIG];		//information about pending signals 
-  struct handlerinfo allinfo[NUMSIG];		//information about signal handlers
+  siginfo pending_info[NUMSIG];		//information about pending signals 
+  handlerinfo allinfo[NUMSIG];		//information about signal handlers
   						//above 2 arrays should be indexed by signum
   int justwoken;		//if process has just woken up after a sleep, etc.
 };
@@ -70,3 +71,6 @@ struct proc {
 //   original data and bss
 //   fixed-size stack
 //   expandable heap
+
+
+

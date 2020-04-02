@@ -40,16 +40,16 @@ typedef int pid_t;
 typedef void (*sighandler_t)(int);
 
 
-struct signinfo {
+typedef struct signinfo {
   //int signum;		//number of the sent signal
   pid_t from_pid;	//signal sent by which process? Its pid
   uint from_ecx;	//ecx of the signal that sent the signal
-};
+}siginfo;
 
-struct handlerinfo {
+typedef struct handlerinfo {
 	//int signum
 	int disposition;	//either SIG_DFL, SIG_IGN, or SIG_USERDEF
 	sighandler_t handler;	//address of the user defined signal handler
-};
+}handlerinfo;
 
 

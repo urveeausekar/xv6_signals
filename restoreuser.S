@@ -27,9 +27,10 @@ restoreuser:
 	popl %fs
 	popl %es
 	popl %ds
-	addl $4, %esp	#skip ip for now, restore it last.
-	popl %cs
-	popl %eflag
-	movl -12(%esp), eip
+	iret
+	#addl $4, %esp	#skip ip for now, restore it last.
+	#popl %cs
+	#popl %eflag
+	#movl -12(%esp), eip
 	#done.
 	

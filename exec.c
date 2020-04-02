@@ -28,8 +28,8 @@ exec(char *path, char **argv)
       continue;
     else
     {
-      p->allinfo[i].disposition = SIG_DFL;
-      p->allinfo[i].handler = def_disposition[i];
+      curproc->allinfo[i].disposition = SIG_DFL;
+      //curproc->allinfo[i].handler = def_disposition[i]; Unnecessary
     }
   }
   
