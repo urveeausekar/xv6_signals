@@ -44,18 +44,21 @@ sys_Kill(void)
 	return Kill(pid, signal);
 }
 
-
+//FIXME:check if this cast okay
 int
 sys_signal(void)
 {
 	int signum;
 	sighandler_t ptr;
+	addr_sigret sigretfn;
 	
-	if(argint(0, &signal) < 0)
+	if(argint(0, (int *)sigretfn) < 0)
 		return -1;
-	if(argint(1, &ptr) < 0)
+	if(argint(1, &signum) < 0)
 		return -1;
-	return signal(signum, ptr);
+	if(argint(2, (int *)ptr) < 0)
+		return -1;
+	return signal(sigretfn, signum, ptr);
 	
 }
 
@@ -66,7 +69,7 @@ sys_sigreturn(void)
 	//We have not come to sigreturn through a call instruction, but we have edited stack ourselves. So ip is not pushed.
 	//Therefore, the user esp pointed directly to the argument instead of to the ip
 	//Therefore we modify argint.
-	fetchint((myproc()->tf->esp), signum);
+	fetchint((myproc()->tf->esp), &signum);
 	kernel_sigreturn(signum);
 	//will never return. If it does return, something has gone wrong, so return -1.
 	return -1;

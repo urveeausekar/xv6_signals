@@ -60,10 +60,11 @@ struct proc {
   uint sigpending;             // pending signals. Every bit stands for 1 signal
   uint sigblocked;             // blocked signals (by the process)
   uint userdefed;	       // signals for which user has defined the handler
-  siginfo pending_info[NUMSIG];		//information about pending signals 
+  //siginfo pending_info[NUMSIG];		//information about pending signals 
   handlerinfo allinfo[NUMSIG];		//information about signal handlers
-  						//above 2 arrays should be indexed by signum
+  					//above 2 arrays should be indexed by signum
   int justwoken;		//if process has just woken up after a sleep, etc.
+  addr_sigret addr_sigreturn;		//address of sigreturn as seen by the user
 };
 
 // Process memory is laid out contiguously, low addresses first:

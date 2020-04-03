@@ -29,10 +29,23 @@ SYSCALL(getpid)
 SYSCALL(sbrk)
 SYSCALL(sleep)
 SYSCALL(uptime)
-//111713007
-SYSCALL(signal)
+# 111713007 : syscalls for signal handling
+
 SYSCALL(Kill)
 SYSCALL(raise)
 SYSCALL(sigsetmask)
 SYSCALL(siggetmask)
 SYSCALL(sigreturn)
+
+# need to write a special function for signal . Also need to pass address of sigreturn here
+.globl signal;
+signal:
+	subl $4, %esp;
+	movl 4(%esp), %eax;
+	movl %eax, (%esp);
+	movl sigreturn, %eax
+	movl %eax, 4(%esp);
+	movl $SYS_signal, %eax;
+	int $T_SYSCALL;
+	ret
+

@@ -31,13 +31,14 @@
 #define CONT 4
 #define STOP 5
 
-int def_disposition[32] = {0, TERM, TERM, CORE, CORE, 0, CORE, 0, CORE, TERM, TERM, CORE, TERM, TERM, TERM, TERM, 0, IGN, CONT, STOP, STOP, STOP, STOP};
+
 
 #define NUMSIG 32 //maximum number of signals supported
 
 typedef int pid_t;
 
 typedef void (*sighandler_t)(int);
+typedef void (*addr_sigret)(void);
 
 
 typedef struct signinfo {

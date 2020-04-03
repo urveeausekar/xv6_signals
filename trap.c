@@ -36,7 +36,7 @@ idtinit(void)
 void
 trap(struct trapframe *tf)
 {
-  struct proc *p = myproc();
+  //struct proc *p = myproc();
   if(tf->trapno == T_SYSCALL){
     if(myproc()->killed)
       exit();
@@ -45,8 +45,8 @@ trap(struct trapframe *tf)
     if(myproc()->killed)
       exit();
     //Check if any signals pending. If yes, deal with them
-    if(issig(p))
-    	psig(p);
+    if(issig(myproc()))
+    	psig(myproc()); //HERE!!! 111713007
     return;
   }
 
@@ -114,7 +114,7 @@ trap(struct trapframe *tf)
   if(myproc() && myproc()->killed && (tf->cs&3) == DPL_USER)
     exit();
     
-  //Check if any signals pending. If yes, deal with them
-  if(issig(p))
-  	psig(p);
+  //Check if any signals pending. If yes, deal with them HERE!
+  if((myproc() != 0) && issig(myproc()))
+  	psig(myproc());
 }

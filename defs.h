@@ -10,6 +10,7 @@ struct sleeplock;
 struct stat;
 struct superblock;
 typedef void (*sighandler_t)(int);
+typedef void (*addr_sigret)(void);
 
 // bio.c
 void            binit(void);
@@ -129,7 +130,7 @@ int		restoreuser(int, int);
 int		issig(struct proc *);
 int		psig(struct proc *);
 int		Kill(int, int);
-int		signal(int signum, sighandler_t handler);
+int		signal(addr_sigret, int signum, sighandler_t handler);
 int		raise(int);
 uint		siggetmask(void);
 uint		sigsetmask(uint);

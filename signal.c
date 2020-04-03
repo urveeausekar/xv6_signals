@@ -17,6 +17,7 @@ extern sighandler_t sigreturn;
 
 extern struct proctable ptable;
 
+int def_disposition[32] = {0, TERM, TERM, CORE, CORE, 0, CORE, 0, CORE, TERM, TERM, CORE, TERM, TERM, TERM, TERM, 0, IGN, CONT, STOP, STOP, STOP, STOP};
 
 void
 checkforsignals(struct proc *p)
@@ -84,7 +85,9 @@ stop(struct proc *q, int *done)
 }
 
 
-
+// PAGEBREAK!
+// psig handler all signals that can be handled by the kernel
+// If there are any user defined handler, it sets up user stack for user handler to run and jumps to user handler
 
 int psig(struct proc *p)
 {
@@ -201,7 +204,7 @@ int psig(struct proc *p)
 	//context of kernel saved on user stack
 
 	*(uint *)((p->tf->esp) - 64) = i;
-	*(uint *)((p->tf->esp) - 68) = sigreturn; //check this
+	*(uint *)((p->tf->esp) - 68) = p->addr_sigreturn; //check this
 
 	/*asm volatile ("movl %0, %%esp" : :"m"(p->tf->esp));  //switch to user's stack
 	asm volatile ("subl $68, %%esp" : : );
@@ -230,8 +233,9 @@ int psig(struct proc *p)
  
 }
 
-
-// Code for the syscalls that the user will call.
+// PAGEBREAK!
+// After the user handler finishes execution,we must restore context of the user process that was,before it got interrupted
+// So, kernel sigreturn calls restoreuser() which restores all registers and jumps back to user process
 
 void
 kernel_sigreturn(int signal)
@@ -246,10 +250,12 @@ kernel_sigreturn(int signal)
 
 
 
-
+// specifies handlers for signals.
+// the returnfn specifies the user address of the systemcall sigreturn, which we will need if we want to execute a user 
+// defined handler
 
 int
-signal(int signum, sighandler_t handler)
+signal(addr_sigret returnfn, int signum, sighandler_t handler)
 {
 	if(signum == 0)
 		return -1;
@@ -258,6 +264,7 @@ signal(int signum, sighandler_t handler)
 	
 	acquire(&ptable.lock);
 	
+	p->addr_sigreturn = NULL;
 	if(handler == (void *)SIG_IGN)
 		p->allinfo[signum].disposition = SIG_IGN;
 	else if(handler == SIG_DFL)
@@ -266,6 +273,7 @@ signal(int signum, sighandler_t handler)
 		p->allinfo[signum].disposition = SIG_USERDEF;
 		p->userdefed = p->sigblocked | (1 << signum);
 		p->allinfo[signum].handler = handler;
+		p->addr_sigreturn = returnfn;
 	}
 		
 	release(&ptable.lock);
@@ -351,6 +359,8 @@ int raise(int sig)
 
 }
 
+// PAGEBREAK!
+// returns current mask
 
 uint 
 siggetmask(void)
