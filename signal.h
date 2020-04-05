@@ -20,13 +20,16 @@
 #define SIGTTIN      21    //Stop    Terminal input for background process
 #define SIGTTOU      22    //Stop    Terminal output for background process
 
-#define SIG_DFL 0
-#define SIG_IGN 1
-#define SIG_USERDEF 2
+#define SIG_DFL (void (*)())0
+#define SIG_IGN (void (*)())1
+#define SIG_USERDEF (void (*)())2
 
+#define DFL 0
+#define IGN 1
+#define USERDEF 2
 
 #define TERM 1
-#define IGN 2
+#define IGNORE 2
 #define CORE 3
 #define CONT 4
 #define STOP 5
@@ -49,7 +52,7 @@ typedef struct signinfo {
 
 typedef struct handlerinfo {
 	//int signum
-	int disposition;	//either SIG_DFL, SIG_IGN, or SIG_USERDEF
+	int disposition;	//either DFL, IGN, or USERDEF
 	sighandler_t handler;	//address of the user defined signal handler
 }handlerinfo;
 

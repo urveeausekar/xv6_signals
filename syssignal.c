@@ -49,15 +49,19 @@ int
 sys_signal(void)
 {
 	int signum;
+	int ptr1, sigretfn1;
 	sighandler_t ptr;
 	addr_sigret sigretfn;
 	
-	if(argint(0, (int *)sigretfn) < 0)
+	if(argint(0, &sigretfn1) < 0)
 		return -1;
 	if(argint(1, &signum) < 0)
 		return -1;
-	if(argint(2, (int *)ptr) < 0)
+	if(argint(2, &ptr1) < 0)
 		return -1;
+		
+	ptr = (sighandler_t)ptr1;
+	sigretfn = (addr_sigret)sigretfn1;
 	return signal(sigretfn, signum, ptr);
 	
 }

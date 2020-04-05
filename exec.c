@@ -20,18 +20,7 @@ exec(char *path, char **argv)
   pde_t *pgdir, *oldpgdir;
   struct proc *curproc = myproc();
  
-  //signal dispositions reset to default for all except ignored signals
   
-  for(i = 0; i < NUMSIG; i++)
-  {
-    if(curproc->allinfo[i].disposition == SIG_IGN)
-      continue;
-    else
-    {
-      curproc->allinfo[i].disposition = SIG_DFL;
-      //curproc->allinfo[i].handler = def_disposition[i]; Unnecessary
-    }
-  }
   
   begin_op();
 
@@ -113,6 +102,20 @@ exec(char *path, char **argv)
   curproc->sz = sz;
   curproc->tf->eip = elf.entry;  // main
   curproc->tf->esp = sp;
+  //signal dispositions reset to default for all except ignored signals
+  
+  for(i = 0; i < NUMSIG; i++)
+  {
+    if(curproc->allinfo[i].disposition == IGN)
+      continue;
+    else
+    {
+      curproc->allinfo[i].disposition = DFL;
+      //curproc->allinfo[i].handler = def_disposition[i]; Unnecessary
+    }
+  }
+  
+  
   switchuvm(curproc);
   freevm(oldpgdir);
   return 0;

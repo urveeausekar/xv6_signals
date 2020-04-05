@@ -1,4 +1,4 @@
-#include "types.h"
+/*#include "types.h"
 #include "defs.h"
 #include "param.h"
 #include "memlayout.h"
@@ -18,14 +18,6 @@ extern sighandler_t sigreturn;
 extern struct proctable ptable;
 
 int def_disposition[32] = {0, TERM, TERM, CORE, CORE, 0, CORE, 0, CORE, TERM, TERM, CORE, TERM, TERM, TERM, TERM, 0, IGN, CONT, STOP, STOP, STOP, STOP};
-
-void
-checkforsignals(struct proc *p)
-{
-	if(issig(p))
-		psig(p);
-}
-
 
 
 int issig(struct proc *p)
@@ -91,8 +83,12 @@ stop(struct proc *q, int *done)
 
 int psig(struct proc *p)
 {
-  int i;
   
+  if(!p)
+  	return -1;
+  
+  int i;
+  cprintf("in psig\n");
   int stopsig[4] = {19, 20, 21, 22};
   int coresig[5] = {SIGQUIT, SIGABRT, SIGILL, SIGFPE, SIGSEGV};
   int termsig[7] = {SIGHUP, SIGINT, SIGPIPE, SIGALRM, SIGTERM, SIGUSR1, SIGUSR2};
@@ -159,30 +155,17 @@ int psig(struct proc *p)
   
   
   //Now if signals are userdefined.
-	if(p->userdefed == 0)
+	if(p->userdefed == 0){
+		cprintf("Out of psig, if no userdefed\n");
 		return 1;
+	}
 	else{
 		for(i = 1; i < 32; i++){
 			if((p->userdefed & (1 << i)) == (1 << i))
 				break;		//i is the signal number that is pending
 		}
 	// asm volatile("movl $0, %0" : "+m" (lk->locked) : ); example asm usage
-	/*asm volatile ("movl %%esp, %0" : "=r"(esp) : );
-	asm volatile ("movl %%ss, %0" : "=r"(ss) : );
-	asm volatile ("movl %%cs, %0" : "=r"(cs) : );
-	asm volatile ("movl %%ds, %0" : "=r"(ds) : );
-	asm volatile ("movl %%es, %0" : "=r"(es) : );
-	asm volatile ("movl %%eax, %0" : "=r"(eax) : );
-	asm volatile ("movl %%ebx, %0" : "=r"(ebx) : );
-	asm volatile ("movl %%ecx, %0" : "=r"(ecx) : );
-	asm volatile ("movl %%edx, %0" : "=r"(edx) : );
-	asm volatile ("movl %%esi, %0" : "=r"(esi) : );
-	asm volatile ("movl %%edi, %0" : "=r"(edi) : );
-	asm volatile ("movl %%ebp, %0" : "=r"(ebp) : );
-	asm volatile ("movl %%fs, %0" : "=r"(fs) : );
-	asm volatile ("movl %%gs, %0" : "=r"(gs) : );
-	asm volatile ("movl %%eflag, %0" : "=r"(eflag) : );
-	asm volatile ("movl %%eip, %0" : "=r"(eip) : );*/
+	/*
 
 	*(uint *)((p->tf->esp) - 4) = p->tf->eflags;
 	*(uint *)((p->tf->esp) - 8) = p->tf->cs;
@@ -206,16 +189,7 @@ int psig(struct proc *p)
 	*(uint *)((p->tf->esp) - 64) = i;
 	*(uint *)((p->tf->esp) - 68) = p->addr_sigreturn; //check this
 
-	/*asm volatile ("movl %0, %%esp" : :"m"(p->tf->esp));  //switch to user's stack
-	asm volatile ("subl $68, %%esp" : : );
-	asm volatile ("movw %0, %%ss" : :"m"(p->tf->ss));		//switch to user ss
-	asm volatile ("movl %0, %%cs" : :"m" (p->tf->cs));
-	// asm volatile ("movl %%eip, %0" : "=r"(eip) : );
-	// *((p->tf->esp) - 20) = eip;
 
-	asm volatile ("movl %0, %%eip" : :"m" (p->allinfo[i].handler)); //start running handler
-
-	*/
 	//Now we push to current stack things so that iret takes us back to level3
 	p->tf->esp = p->tf->esp - 68;
 	asm volatile("pushl %0" : :"m"(p->tf->ss));
@@ -241,6 +215,9 @@ void
 kernel_sigreturn(int signal)
 {
 	struct proc *p = myproc();
+	if(!p)
+		return;
+	
 	p->userdefed = p->userdefed & (! (1 << signal));
   	p->sigpending = p->sigpending & (! (1 << signal));
   	int esp = p->tf->esp, ss = p->tf->ss;
@@ -253,14 +230,21 @@ kernel_sigreturn(int signal)
 // specifies handlers for signals.
 // the returnfn specifies the user address of the systemcall sigreturn, which we will need if we want to execute a user 
 // defined handler
+// ignores attempt to ignore or set handler for SIGKILL and SIGSTOP
 
 int
 signal(addr_sigret returnfn, int signum, sighandler_t handler)
 {
 	if(signum == 0)
 		return -1;
+		
+	if(signum == SIGKILL || signum == SIGSTOP)
+		return 0;
 	
 	struct proc *p = myproc();
+	
+	if(!p)
+		return -1;
 	
 	acquire(&ptable.lock);
 	
@@ -287,7 +271,7 @@ signal(addr_sigret returnfn, int signum, sighandler_t handler)
 int 
 Kill(pid_t pid, int sig)
 {
-	
+	cprintf("In kill, start\n");
 	if(pid == 1 || pid == 0 || pid < -1)
 	{
 		cprintf("Operation not allowed\n");
@@ -296,6 +280,10 @@ Kill(pid_t pid, int sig)
 	
 	int receiver_pl = 10, sender_pl = 10;
 	struct proc *p, *curproc = myproc();
+	
+	if(curproc == 0)
+		return -1;
+	
 	int minusone = 0;
 	
 	if(pid == -1)
@@ -345,6 +333,8 @@ Kill(pid_t pid, int sig)
     	
 		}
 	}
+	cprintf("out of kill\n");
+	cprintf("sigpending is %d\n", p->sigpending);
 	return 0;
 	
 	
@@ -354,6 +344,10 @@ Kill(pid_t pid, int sig)
 int raise(int sig)
 {
 	struct proc *p = myproc();
+	
+	if(!p)
+		return -1;
+		
 	return Kill(p->pid, sig);
 	//FIXME : If the signal causes a handler to be called, raise() will  return  only after the signal handler has returned.
 
@@ -366,6 +360,8 @@ uint
 siggetmask(void)
 {
 	struct proc *p = myproc();
+	if(!p)
+		return -1;
 	
 	acquire(&ptable.lock);
 	uint mask = p->sigblocked;
@@ -377,7 +373,16 @@ siggetmask(void)
 uint 
 sigsetmask(uint mask)
 {
+	//It is not possible to block SIGKILL or SIGSTOP.  Attempts to do so are silently ignored
+	
+	if((mask & (1 << SIGKILL)) || (mask & (1 << SIGSTOP)))
+		return 0;
+	
 	struct proc *p = myproc();
+	
+	if(!p)
+		return -1;
+	
 	
 	acquire(&ptable.lock);
 	p->sigblocked = mask;
@@ -385,3 +390,5 @@ sigsetmask(uint mask)
 	
 	return mask;
 }
+
+*/

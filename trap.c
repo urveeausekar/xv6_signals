@@ -45,8 +45,10 @@ trap(struct trapframe *tf)
     if(myproc()->killed)
       exit();
     //Check if any signals pending. If yes, deal with them
-    if(issig(myproc()))
+    if((myproc() != 0) && issig(myproc()))
     	psig(myproc()); //HERE!!! 111713007
+    else{
+    }
     return;
   }
 
@@ -107,14 +109,22 @@ trap(struct trapframe *tf)
   // Force process to give up CPU on clock tick.
   // If interrupts were on while locks held, would need to check nlock.
   if(myproc() && myproc()->state == RUNNING &&
-     tf->trapno == T_IRQ0+IRQ_TIMER)
+     tf->trapno == T_IRQ0+IRQ_TIMER){
+    //cprintf("before yield\n");
     yield();
+     //cprintf("after yield\n");
+   }
 
   // Check if the process has been killed since we yielded
   if(myproc() && myproc()->killed && (tf->cs&3) == DPL_USER)
     exit();
     
   //Check if any signals pending. If yes, deal with them HERE!
-  if((myproc() != 0) && issig(myproc()))
+ // cprintf("just before checking for signals in trap\n");
+  if(myproc() && issig(myproc())){
+  	cprintf("before psig\n");
   	psig(myproc());
+  	cprintf("after psig\n");
+  }
+ // cprintf("Just before return in trap\n");
 }
