@@ -12,8 +12,8 @@
 static int failed = 0;	//keeps track of number of tests failed yet.
 int failedprivate;
 
-int signal_syscall_test(){
-	return 0;
+void sighuphandler(int signum){
+	printf(1, "In user defined sighup handler.\n");
 }
 
 
@@ -27,15 +27,21 @@ int testsignal_syscall(int pid){
 		signal(SIGHUP, SIG_IGN);
 		Kill(getpid(), SIGHUP);
 		printf(1, "Passed\n");
-		printf(1, "Test2 : Checking SIG_DFL\n");
+		printf(1, "Test2 : Checking user defined handler\n");
+		signal(SIGHUP, sighuphandler);
 		Kill(getpid(), SIGHUP);
+		printf(1, "Passed\n");
+		printf(1, "Test3 : Checking SIG_DFL\n");
+		signal(SIGHUP, SIG_DFL);
+		Kill(getpid(), SIGHUP);
+		
 	}
 	else{
 		wait();
-		else return 0;
+		return 1;
 	}
-	//Just in case child reaches here.
-	exit();
+	//psig should terminate process just after returning from kill. So child should never reach here
+
 	return 0;
 }
 
@@ -159,6 +165,7 @@ int main(){
 	if(!testsignal_syscall(pid)){
 		printf(1, "syscall signal() test failed\n");
 		failed++;
+		exit();
 	}
 		
 	

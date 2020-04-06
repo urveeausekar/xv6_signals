@@ -65,6 +65,9 @@ void            ioapicenable(int irq, int cpu);
 extern uchar    ioapicid;
 void            ioapicinit(void);
 
+// jmptohandler.S
+void		jmptohandler(sighandler_t, uint, uint, uint, uint);
+
 // kalloc.c
 char*           kalloc(void);
 void            kfree(char*);

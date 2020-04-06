@@ -42,13 +42,13 @@ trap(struct trapframe *tf)
       exit();
     myproc()->tf = tf;
     syscall();
+    
+    //Check if any signals pending. If yes, deal with them
+    if(myproc() && issig(myproc()))
+    	psig(myproc()); //HERE!!! 111713007
     if(myproc()->killed)
       exit();
-    //Check if any signals pending. If yes, deal with them
-    if((myproc() != 0) && issig(myproc()))
-    	psig(myproc()); //HERE!!! 111713007
-    else{
-    }
+
     return;
   }
 

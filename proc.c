@@ -579,7 +579,7 @@ int def_disposition[32] = {0, TERM, TERM, CORE, CORE, 0, CORE, 0, CORE, TERM, TE
 
 int issig(struct proc *p)
 {
-  return p->sigpending & (!p->sigblocked); 
+  return p->sigpending & (~(p->sigblocked)); 
 }
 
 
@@ -605,6 +605,8 @@ term(struct proc *q, int * done)
   *done = 1;
 }
 
+
+//FIXME: think about this, switching context, etc.
 void
 cont(struct proc *q)
 {
@@ -661,7 +663,7 @@ int psig(struct proc *p)
   	if(((p->sigpending & (1 << termsig[i])) == (1 << termsig[i])) && ((p->sigblocked & (1 << termsig[i])) == 0) && p->allinfo[termsig[i]].disposition == DFL){
   		if(termcalled == 0)
   			term(p, &termcalled);
-  		p->sigpending = p->sigpending & (! (1 << termsig[i]));
+  		p->sigpending = p->sigpending & (~(1 << termsig[i]));
   	}
   }
   
@@ -671,7 +673,7 @@ int psig(struct proc *p)
   	if(((p->sigpending & (1 << coresig[i])) == (1 << coresig[i])) && ((p->sigblocked & (1 << coresig[i])) == 0) && p->allinfo[coresig[i]].disposition == DFL){
   		if(corecalled == 0)
   			term(p, &corecalled);
-  		p->sigpending = p->sigpending & (! (1 << coresig[i]));
+  		p->sigpending = p->sigpending & (~(1 << coresig[i]));
   	}
   }
   
@@ -683,13 +685,13 @@ int psig(struct proc *p)
   if((p->sigpending & (1 << 19)) == (1 << 19))
   {	
     stop(p, &stopcalled);
-    p->sigpending = p->sigpending & (! (1 << 19));
+    p->sigpending = p->sigpending & (~(1 << 19));
   }
   
   
   if(((p->sigpending & (1 << 17)) == (1 << 17)) && ((p->sigblocked & (1 << 17)) == 0) && p->allinfo[SIGCHLD].disposition == DFL){
   	ign();
-  	p->sigpending = p->sigpending & (! (1 << 17));
+  	p->sigpending = p->sigpending & (~(1 << 17));
   }
   
   
@@ -697,21 +699,21 @@ int psig(struct proc *p)
   for(i = 0; i < 4 ; i++){
   	if(((p->sigpending & (1 << stopsig[i])) == (1 << stopsig[i])) && ((p->sigblocked & (1 << stopsig[i])) == 0) && p->allinfo[stopsig[i]].disposition == DFL && ((p->sigpending & (1 << 18)) == (1 << 18)) && ((p->sigblocked & (1 << 18)) == 0) && p->allinfo[SIGCONT].disposition == DFL){
   		
-  		p->sigpending = p->sigpending & (! (1 << 18));
-  		p->sigpending = p->sigpending & (! (1 << stopsig[i]));
+  		p->sigpending = p->sigpending & (~(1 << 18));
+  		p->sigpending = p->sigpending & (~(1 << stopsig[i]));
   	}
   	else if (((p->sigpending & (1 << stopsig[i])) == (1 << stopsig[i])) && ((p->sigblocked & (1 << stopsig[i])) == 0) && p->allinfo[stopsig[i]].disposition == DFL){
   		// i.e no sigcont, only a signal which causes a stop
   		if(stopcalled == 0)
   			stop(p, &stopcalled);
-  		p->sigpending = p->sigpending & (! (1 << stopsig[i]));
+  		p->sigpending = p->sigpending & (~(1 << stopsig[i]));
   	}
   }
   
   //If there is only a sigcont
   if(((p->sigpending & (1 << 18)) == (1 << 18)) && ((p->sigblocked & (1 << 18)) == 0) && p->allinfo[SIGCONT].disposition == DFL){
   	cont(p);
-  	p->sigpending = p->sigpending & (! (1 << 18));
+  	p->sigpending = p->sigpending & (~(1 << 18));
   }
   
   
@@ -721,10 +723,12 @@ int psig(struct proc *p)
 		return 1;
 	}
 	else{
+		cprintf("About to go to user defined handler\n");
 		for(i = 1; i < 32; i++){
 			if((p->userdefed & (1 << i)) == (1 << i))
 				break;		//i is the signal number that is pending
 		}
+		cprintf("Found i is %d\n", i);
 	// asm volatile("movl $0, %0" : "+m" (lk->locked) : ); example asm usage
 	/*asm volatile ("movl %%esp, %0" : "=r"(esp) : );
 	asm volatile ("movl %%ss, %0" : "=r"(ss) : );
@@ -763,7 +767,7 @@ int psig(struct proc *p)
 	//context of kernel saved on user stack
 
 	*(uint *)((p->tf->esp) - 64) = i;
-	*(uint *)((p->tf->esp) - 68) = p->addr_sigreturn; //check this
+	*(uint *)((p->tf->esp) - 68) = (uint)p->addr_sigreturn; //check this
 
 	/*asm volatile ("movl %0, %%esp" : :"m"(p->tf->esp));  //switch to user's stack
 	asm volatile ("subl $68, %%esp" : : );
@@ -777,13 +781,15 @@ int psig(struct proc *p)
 	*/
 	//Now we push to current stack things so that iret takes us back to level3
 	p->tf->esp = p->tf->esp - 68;
-	asm volatile("pushl %0" : :"m"(p->tf->ss));
+	cprintf("Here \n");
+	/*asm volatile("pushl %0" : :"m"(p->tf->ss));
 	asm volatile("pushl %0" : :"m"(p->tf->esp));
 	asm volatile("pushl %0" : :"m"(p->tf->eflags));
 	asm volatile("pushl %0" : :"m"(p->tf->cs));
 	asm volatile("pushl %0" : :"m"(p->allinfo[i].handler));
-	asm volatile("iret" : : );
-
+	asm volatile("iret" : : );*/
+	
+	jmptohandler(p->allinfo[i].handler, p->tf->cs, p->tf->eflags, p->tf->esp, p->tf->ss);
 
 	}
 	//won't reach here. But still.
@@ -803,8 +809,8 @@ kernel_sigreturn(int signal)
 	if(!p)
 		return;
 	
-	p->userdefed = p->userdefed & (! (1 << signal));
-  	p->sigpending = p->sigpending & (! (1 << signal));
+	//p->userdefed = p->userdefed & (~(1 << signal)); NOPE!Userdefed handlers remain user defined unless signal called
+  	p->sigpending = p->sigpending & (~(1 << signal));
   	int esp = p->tf->esp, ss = p->tf->ss;
   	restoreuser(ss, esp);
 }
@@ -837,14 +843,22 @@ signal(addr_sigret returnfn, int signum, sighandler_t handler)
 	
 	p->addr_sigreturn = NULL;
 	if(handler == SIG_IGN){
+		if(p->allinfo[signum].disposition == USERDEF)
+			p->userdefed = p->userdefed & (~(1 << signum));
+		
 		p->allinfo[signum].disposition = IGN;
 		//cprintf("In IGN\n");
 	}
-	else if(handler == SIG_DFL)
+	else if(handler == SIG_DFL){
+		if(p->allinfo[signum].disposition == USERDEF)
+			p->userdefed = p->userdefed & (~(1 << signum));
+			
 		p->allinfo[signum].disposition = DFL;
+		
+	}
 	else{
 		p->allinfo[signum].disposition = USERDEF;
-		p->userdefed = p->sigblocked | (1 << signum);
+		p->userdefed = p->userdefed | (1 << signum);
 		p->allinfo[signum].handler = handler;
 		p->addr_sigreturn = returnfn;
 	}
