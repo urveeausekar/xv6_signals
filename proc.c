@@ -606,7 +606,9 @@ term(struct proc *q, int * done)
 }
 
 
-//FIXME: think about this, switching context, etc.
+//FIXME:
+// No, process won't ever be scheduled because it is sleeping, so psig never called on a sleeping process
+// So, Kill must alter state of process and make it runnable, not cont.
 void
 cont(struct proc *q)
 {
@@ -726,26 +728,10 @@ int psig(struct proc *p)
 		cprintf("About to go to user defined handler\n");
 		for(i = 1; i < 32; i++){
 			if((p->userdefed & (1 << i)) == (1 << i))
-				break;		//i is the signal number that is pending
+				break;		
+			//i is the signal number that is pending
 		}
 		cprintf("Found i is %d\n", i);
-	// asm volatile("movl $0, %0" : "+m" (lk->locked) : ); example asm usage
-	/*asm volatile ("movl %%esp, %0" : "=r"(esp) : );
-	asm volatile ("movl %%ss, %0" : "=r"(ss) : );
-	asm volatile ("movl %%cs, %0" : "=r"(cs) : );
-	asm volatile ("movl %%ds, %0" : "=r"(ds) : );
-	asm volatile ("movl %%es, %0" : "=r"(es) : );
-	asm volatile ("movl %%eax, %0" : "=r"(eax) : );
-	asm volatile ("movl %%ebx, %0" : "=r"(ebx) : );
-	asm volatile ("movl %%ecx, %0" : "=r"(ecx) : );
-	asm volatile ("movl %%edx, %0" : "=r"(edx) : );
-	asm volatile ("movl %%esi, %0" : "=r"(esi) : );
-	asm volatile ("movl %%edi, %0" : "=r"(edi) : );
-	asm volatile ("movl %%ebp, %0" : "=r"(ebp) : );
-	asm volatile ("movl %%fs, %0" : "=r"(fs) : );
-	asm volatile ("movl %%gs, %0" : "=r"(gs) : );
-	asm volatile ("movl %%eflag, %0" : "=r"(eflag) : );
-	asm volatile ("movl %%eip, %0" : "=r"(eip) : );*/
 
 	*(uint *)((p->tf->esp) - 4) = p->tf->eflags;
 	*(uint *)((p->tf->esp) - 8) = p->tf->cs;
@@ -769,16 +755,6 @@ int psig(struct proc *p)
 	*(uint *)((p->tf->esp) - 64) = i;
 	*(uint *)((p->tf->esp) - 68) = (uint)p->addr_sigreturn; //check this
 
-	/*asm volatile ("movl %0, %%esp" : :"m"(p->tf->esp));  //switch to user's stack
-	asm volatile ("subl $68, %%esp" : : );
-	asm volatile ("movw %0, %%ss" : :"m"(p->tf->ss));		//switch to user ss
-	asm volatile ("movl %0, %%cs" : :"m" (p->tf->cs));
-	// asm volatile ("movl %%eip, %0" : "=r"(eip) : );
-	// *((p->tf->esp) - 20) = eip;
-
-	asm volatile ("movl %0, %%eip" : :"m" (p->allinfo[i].handler)); //start running handler
-
-	*/
 	//Now we push to current stack things so that iret takes us back to level3
 	p->tf->esp = p->tf->esp - 68;
 	cprintf("Here \n");
@@ -789,6 +765,10 @@ int psig(struct proc *p)
 	asm volatile("pushl %0" : :"m"(p->allinfo[i].handler));
 	asm volatile("iret" : : );*/
 	
+	cprintf(" in psig, printing: ss = %d, esp = %d, flag = %d, cs = %d, handler ptr = %d\n", p->tf->ss, p->tf->esp, p->tf->eflags,  p->tf->cs, p->allinfo[i].handler);
+	
+	p->sigpending = p->sigpending & (~(1 << i));
+	//FIXME : put a synchronise here?
 	jmptohandler(p->allinfo[i].handler, p->tf->cs, p->tf->eflags, p->tf->esp, p->tf->ss);
 
 	}
@@ -864,7 +844,7 @@ signal(addr_sigret returnfn, int signum, sighandler_t handler)
 	}
 		
 	release(&ptable.lock);
-	//cprintf("before signal return , DISposition is %d\n", p->allinfo[signum].disposition);
+	cprintf("before signal return , fn ptr sigreturn is %d\n", p->addr_sigreturn);
 	return 0;
 }
 
@@ -927,7 +907,7 @@ Kill(pid_t pid, int sig)
 				else
 					return 0;
 			}
-			if(sig == SIGCHLD && p->allinfo[SIGCHLD].disposition == DFL){
+			else if(sig == SIGCHLD && p->allinfo[SIGCHLD].disposition == DFL){
 				release(&ptable.lock);
 				if(minusone)
 					continue;
@@ -939,6 +919,18 @@ Kill(pid_t pid, int sig)
 					return 0;
 					
 				}
+			}
+			else if(sig == SIGCONT && p->allinfo[SIGCONT].disposition == DFL){
+				if(p->state == SLEEPING){
+					p->state = RUNNABLE;
+					p->justwoken = 1;
+				}
+				release(&ptable.lock);
+				if(minusone)
+					continue;
+				else
+					return 0;
+				
 			}
 	    	
 			if(p->allinfo[sig].disposition != IGN && sig != 0){

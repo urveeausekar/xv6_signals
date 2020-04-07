@@ -28,6 +28,9 @@ int testsignal_syscall(int pid){
 		Kill(getpid(), SIGHUP);
 		printf(1, "Passed\n");
 		printf(1, "Test2 : Checking user defined handler\n");
+		printf(1, " In signaltest, Address of function sigreturn is %d\n", sigreturn);
+		printf(1, "Address of handler is %d\n", sighuphandler);
+		
 		signal(SIGHUP, sighuphandler);
 		Kill(getpid(), SIGHUP);
 		printf(1, "Passed\n");
