@@ -4,13 +4,13 @@ signal mask:
 
 uint sigsetmask(uint mask);
 	-To mask signal y , user should first get the current mask using siggetmask, and then set the yth bit of the mask
-	 to 1. Here LSB is considered as bit 0 on the right side. This can be done by logical ORint the current mask with
+	 to 1. Here LSB is considered as bit 0 on the right side. This can be done by logical ORing the current mask with
 	 the current mask with a 32 bit quantity with all bits except the yth bit 0.
 	-Then the result of the logical OR should be given as argument to sigsetmask.
 	-The return value is the new mask.
 
 
-uint siggetmask();
+uint siggetmask(void);
 	-Returns the current signal mask.
 	
 	
@@ -23,3 +23,7 @@ int Kill(pid_t pid, int sig):
 	-If signal is 0, no changes in proc of signalled of process, ie no signalling is actually done.
 	-If pid is -1, then every process that the sender is allowed to signal, is signalled.
 	
+void sigreturn(void)
+	- This system call is NEVER to be called by the user.
+	- It is automatically called after the user defined signal handler returns
+	  and is used to restore the context of the user.

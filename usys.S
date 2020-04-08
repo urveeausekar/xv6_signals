@@ -35,17 +35,24 @@ SYSCALL(Kill)
 SYSCALL(raise)
 SYSCALL(sigsetmask)
 SYSCALL(siggetmask)
-SYSCALL(sigreturn)
+#SYSCALL(sigreturn)
+# doesn't seem to be working like this, trying to expand the macro.
 
-# need to write a special function for signal . Also need to pass address of sigreturn here
+.globl sigreturn;
+sigreturn:
+	movl $SYS_sigreturn, %eax
+	int $T_SYSCALL
+	ret
+
+# need to write a special function for signal . Also need to pass address of sigreturn here, without bothering user
 .globl signal;
 signal:
-	subl $4, %esp;
-	movl 4(%esp), %eax;
-	movl %eax, (%esp);
-	movl sigreturn, %eax
-	movl %eax, 4(%esp);
-	movl $SYS_signal, %eax;
-	int $T_SYSCALL;
+	subl $4, %esp
+	movl 4(%esp), %eax
+	movl %eax, (%esp)
+	movl $sigreturn, %eax
+	movl %eax, 4(%esp)
+	movl $SYS_signal, %eax
+	int $T_SYSCALL
 	ret
 

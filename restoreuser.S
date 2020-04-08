@@ -1,36 +1,19 @@
 # To restore user context and jump to where the user process was when it was interrupted.
 #
-#	int restoreuser(int ss, int esp);
+#	int restoreuser(uint edi, uint esi, uint ebp, uint oesp, uint ebx, uint edx, uint ecx, uint eax, uint gs, uint fs, uint es, uint ds, uint eip, uint cs, uint eflag, uint esp, uint ss);
 #
-# We have saved the context of the process in the user stack. 
-# Right now we are running on the kernel stack. But the user esp and ss has been passed to us an an argument.
-# So switch stacks to user stack. 
-# Now we pop the registers off the user's stack and ret.
+# Now, we have the context of the process, saved in the kernel stack, as they have been passed as arguments. 
+# Right now we are running on the kernel stack.
+# Below ss in the kernel stack, there is also the return address of kernel_sigreturn, which we just ignore.
+# Now we pop the registers off the kernel stack and iret.
 
 .globl restoreuser
 restoreuser:
-	mov 4(%esp), %ss
-	mov 8(%esp), %esp
-	
-	#stack switched
-	
-	addl $4, %esp	#argument of signum still on stack
-	popl %edi
-	popl %esi
-	popl %ebp
-	addl $4, %esp 	#skip the pushed esp
-	popl %ebx
-	popl %edx
-	popl %ecx
-	popl %eax
+	addl $4, %esp
+	popal
 	popl %gs
 	popl %fs
 	popl %es
 	popl %ds
 	iret
-	#addl $4, %esp	#skip ip for now, restore it last.
-	#popl %cs
-	#popl %eflag
-	#movl -12(%esp), eip
-	#done.
 	

@@ -127,7 +127,7 @@ void            wakeup(void*);
 void            yield(void);
 
 //restoreuser.S
-int		restoreuser(int, int);
+int		restoreuser(uint, uint, uint, uint, uint, uint, uint, uint, uint, uint, uint, uint, uint, uint, uint, uint, uint);
 
 //signal.c
 int		issig(struct proc *);

@@ -725,47 +725,40 @@ int psig(struct proc *p)
 		return 1;
 	}
 	else{
-		cprintf("About to go to user defined handler\n");
+		//cprintf("About to go to user defined handler\n");
 		for(i = 1; i < 32; i++){
 			if((p->userdefed & (1 << i)) == (1 << i))
 				break;		
 			//i is the signal number that is pending
 		}
-		cprintf("Found i is %d\n", i);
+		//cprintf("Found i is %d\n", i);
 
-	*(uint *)((p->tf->esp) - 4) = p->tf->eflags;
-	*(uint *)((p->tf->esp) - 8) = p->tf->cs;
-	*(uint *)((p->tf->esp) - 12) = p->tf->eip;
-	*(uint *)((p->tf->esp) - 16) = p->tf->ds;
-	*(uint *)((p->tf->esp) - 20) = p->tf->es;
-	*(uint *)((p->tf->esp) - 24) = p->tf->fs;
-	*(uint *)((p->tf->esp) - 28) = p->tf->gs;
-	*(uint *)((p->tf->esp) - 32) = p->tf->eax;
-	*(uint *)((p->tf->esp) - 36) = p->tf->ecx;
-	*(uint *)((p->tf->esp) - 40) = p->tf->edx;
-	*(uint *)((p->tf->esp) - 44) = p->tf->ebx;
-	*(uint *)((p->tf->esp) - 48) = p->tf->esp;
-	*(uint *)((p->tf->esp) - 52) = p->tf->ebp;
-	*(uint *)((p->tf->esp) - 56) = p->tf->esi;
-	*(uint *)((p->tf->esp) - 60) = p->tf->edi;
-	//*((p->tf->esp) - 64) = p->tf->esi;
-	//*((p->tf->esp) - 68) = p->tf->edi;
+	*(uint *)((p->tf->esp) - 4) = p->tf->ss;
+	*(uint *)((p->tf->esp) - 8) = p->tf->esp;
+	*(uint *)((p->tf->esp) - 12) = p->tf->eflags;
+	*(uint *)((p->tf->esp) - 16) = p->tf->cs;
+	*(uint *)((p->tf->esp) - 20) = p->tf->eip;
+	*(uint *)((p->tf->esp) - 24) = p->tf->ds;
+	*(uint *)((p->tf->esp) - 28) = p->tf->es;
+	*(uint *)((p->tf->esp) - 32) = p->tf->fs;
+	*(uint *)((p->tf->esp) - 36) = p->tf->gs;
+	*(uint *)((p->tf->esp) - 40) = p->tf->eax;
+	*(uint *)((p->tf->esp) - 44) = p->tf->ecx;
+	*(uint *)((p->tf->esp) - 48) = p->tf->edx;
+	*(uint *)((p->tf->esp) - 52) = p->tf->ebx;
+	*(uint *)((p->tf->esp) - 56) = p->tf->oesp;
+	*(uint *)((p->tf->esp) - 60) = p->tf->ebp;
+	*(uint *)((p->tf->esp) - 64) = p->tf->esi;
+	*(uint *)((p->tf->esp) - 68) = p->tf->edi;
 	//context of kernel saved on user stack
 
-	*(uint *)((p->tf->esp) - 64) = i;
-	*(uint *)((p->tf->esp) - 68) = (uint)p->addr_sigreturn; //check this
+	*(uint *)((p->tf->esp) - 72) = i;
+	*(uint *)((p->tf->esp) - 76) = (uint)p->addr_sigreturn;
 
 	//Now we push to current stack things so that iret takes us back to level3
-	p->tf->esp = p->tf->esp - 68;
-	cprintf("Here \n");
-	/*asm volatile("pushl %0" : :"m"(p->tf->ss));
-	asm volatile("pushl %0" : :"m"(p->tf->esp));
-	asm volatile("pushl %0" : :"m"(p->tf->eflags));
-	asm volatile("pushl %0" : :"m"(p->tf->cs));
-	asm volatile("pushl %0" : :"m"(p->allinfo[i].handler));
-	asm volatile("iret" : : );*/
-	
-	cprintf(" in psig, printing: ss = %d, esp = %d, flag = %d, cs = %d, handler ptr = %d\n", p->tf->ss, p->tf->esp, p->tf->eflags,  p->tf->cs, p->allinfo[i].handler);
+	p->tf->esp = p->tf->esp - 76;
+	//cprintf("Here \n");
+	//cprintf(" in psig, printing: ss = %d, esp = %d, flag = %d, cs = %d, handler ptr = %d\n", p->tf->ss, p->tf->esp, p->tf->eflags,  p->tf->cs, p->allinfo[i].handler);
 	
 	p->sigpending = p->sigpending & (~(1 << i));
 	//FIXME : put a synchronise here?
@@ -785,14 +778,34 @@ int psig(struct proc *p)
 void
 kernel_sigreturn(int signal)
 {
+	//cprintf("In kernelsigreturn\n");
 	struct proc *p = myproc();
 	if(!p)
 		return;
-	
-	//p->userdefed = p->userdefed & (~(1 << signal)); NOPE!Userdefed handlers remain user defined unless signal called
-  	p->sigpending = p->sigpending & (~(1 << signal));
-  	int esp = p->tf->esp, ss = p->tf->ss;
-  	restoreuser(ss, esp);
+		
+	uint cs, ds, es, ss, fs, gs;
+	uint eax, ebx, ecx, edx, esi, edi, esp, ebp, oesp, eip, eflag;
+  	
+  	esp = p->tf->esp;	//This is current userstack esp, which currently points to sinum argument of user handler
+  	edi = *(uint *)(esp + 4);
+  	esi = *(uint *)(esp + 8);
+  	ebp = *(uint *)(esp + 12);
+  	oesp = *(uint *)(esp + 16);
+  	ebx = *(uint *)(esp + 20);
+  	edx = *(uint *)(esp + 24);
+  	ecx = *(uint *)(esp + 28);
+  	eax = *(uint *)(esp + 32);
+  	gs = *(uint *)(esp + 36);
+  	fs = *(uint *)(esp + 40);
+  	es = *(uint *)(esp + 44);
+  	ds = *(uint *)(esp + 48);
+  	eip = *(uint *)(esp + 52);
+  	cs = *(uint *)(esp + 56);
+  	eflag = *(uint *)(esp + 60);
+  	ss = *(uint *)(esp + 68);
+  	esp = *(uint *)(esp + 64);
+  	
+  	restoreuser(edi, esi, ebp, oesp, ebx, edx, ecx, eax, gs, fs, es, ds, eip, cs, eflag, esp, ss);
 }
 
 
@@ -844,7 +857,7 @@ signal(addr_sigret returnfn, int signum, sighandler_t handler)
 	}
 		
 	release(&ptable.lock);
-	cprintf("before signal return , fn ptr sigreturn is %d\n", p->addr_sigreturn);
+	//cprintf("before signal return , fn ptr sigreturn is %d\n", p->addr_sigreturn);
 	return 0;
 }
 
