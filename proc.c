@@ -648,7 +648,7 @@ int psig(struct proc *p)
   
   
   int i;
-  cprintf("in psig\n");
+  //cprintf("in psig\n");
   int stopsig[4] = {19, 20, 21, 22};
   int coresig[5] = {SIGQUIT, SIGABRT, SIGILL, SIGFPE, SIGSEGV};
   int termsig[7] = {SIGHUP, SIGINT, SIGPIPE, SIGALRM, SIGTERM, SIGUSR1, SIGUSR2};
@@ -719,9 +719,9 @@ int psig(struct proc *p)
   }
   
   
-  //Now if signals are userdefined.
+	//Now if deal with signals that have userdefined handlers (if they are pending)
 	if(p->userdefed == 0){
-		cprintf("Out of psig, if no userdefed\n");
+		//cprintf("Out of psig, if no userdefed\n");
 		return 1;
 	}
 	else{
@@ -868,11 +868,11 @@ signal(addr_sigret returnfn, int signum, sighandler_t handler)
 int 
 Kill(pid_t pid, int sig)
 {
-	cprintf("In kill, start\n");
+	//cprintf("In kill, start\n");
 	if(pid == 1 || pid == 0 || pid < -1)
 	{
 		cprintf("Operation not allowed\n");
-		return -1;
+		return 0;
 	}
 	
 	int receiver_pl = 10, sender_pl = 10;
@@ -911,10 +911,11 @@ Kill(pid_t pid, int sig)
 			acquire(&ptable.lock);
 			
 			if(sig == SIGKILL){
-				p->state = ZOMBIE;
-				p->killed = 1;
-				
+				/*p->state = RUNNABLE;
+				p->killed = 1;*/
 				release(&ptable.lock);
+				kill(p->pid);
+				
 				if(minusone)
 					continue;
 				else
@@ -960,13 +961,15 @@ Kill(pid_t pid, int sig)
 		}
 	}
 	//cprintf("DISposition is %d\n", p->allinfo[sig].disposition);
-	cprintf("out of kill\n");
+	//cprintf("out of kill\n");
 	cprintf("sigpending is %d\n", p->sigpending);
 	return 0;
 	
 	
 }
 
+//If the signal causes a handler to be called, raise() will return 
+//to user space only after the signal handler has returned.
 
 int raise(int sig)
 {
@@ -976,7 +979,7 @@ int raise(int sig)
 		return -1;
 		
 	return Kill(p->pid, sig);
-	//FIXME : If the signal causes a handler to be called, raise() will  return  only after the signal handler has returned.
+	
 
 }
 

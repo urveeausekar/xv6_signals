@@ -16,13 +16,58 @@ void sighuphandler(int signum){
 	printf(1, "In user defined sighup handler.\n");
 }
 
+void sigsegv_handler(int signum){
+	printf(1, "Process received an artificial sigsegv due to a raise call\n");
+}
 
-int raisetest(int pid){
 
+
+int Killtest(){
+	int pid = getpid();
+	printf(1, "\nTesting systemcall Kill()\n\n");
+	printf(1, "Test1 : Testing a signal that is ignored by default - SIGCHLD\n");
+	
+	Kill(pid, SIGCHLD);
+	printf(1, "Passed\n");
+	printf(1, "Test 2 : Testing a signal that causes a process to terminate by  default\n");
+	
+	pid = fork();
+	if(pid == 0){
+		raise(SIGINT);
+		return 1;
+	}
+	else{
+		wait();
+		printf(1, "Passed\n");
+	}
+	
+	printf(1, "Test 3 : Testing a signal that causes a process to dump core by default\n");
+	pid = fork();
+	if(pid == 0){
+		raise(SIGQUIT);
+		return 1;
+	}
+	else{
+		wait();
+		printf(1, "Passed\n");
+	}
+	return 0;
+}
+
+
+
+int raisetest(){
+	printf(1, "\nTesting raise\n\n");
+	signal(SIGSEGV, sigsegv_handler);
+	raise(SIGSEGV);
+	signal(SIGSEGV, SIG_DFL);
+	printf(1, "Passed\n");
+	return 0;
+	
 }
 
 int testsignal_syscall(int pid){
-	printf(1, "Testing systemcall signal\n");
+	printf(1, "\nTesting systemcall signal\n\n");
 	int pidtwo;
 	failedprivate = 0;
 	pidtwo = fork();
@@ -57,7 +102,7 @@ int masktest(){
 	uint mask;
 	int fail = 0;
 	mask = ((1 << SIGHUP) | (1 << SIGINT));		//block sighup and sigint (for example)
-	printf(1, "testing sigsetmask and siggetmask\n");
+	printf(1, "\ntesting sigsetmask and siggetmask\n\n");
 	printf(1, "Test1 : checking normal functionality\n");
 	sigsetmask(mask);
 	if(siggetmask() == mask)
@@ -103,7 +148,7 @@ int masktest(){
 
 int testsigkill1(){
 	int pid;
-	printf(1, "testing SIGKILL\n");
+	printf(1, "\ntesting SIGKILL\n\n");
 	pid = fork();
 	if(pid == 0){
 		//printf(1, "in child");
@@ -125,14 +170,15 @@ int testsigkill1(){
 
 int testsigterm(){
 	int pid;
-	printf(1, "testing SIGTERM\n");
+	printf(1, "\ntesting SIGTERM\n\n");
 	pid = fork();
 	if(pid == 0){
-		while(2000)
-			printf(1, "in while\n");
+		while(2)
+			;
 		exit();
 	}
 	else{
+		sleep(1);
 		Kill(pid, SIGTERM);
 		wait();
 		printf(1, "Sigterm delivered, test passed.\n");
@@ -144,18 +190,18 @@ int testsigterm(){
 
 int main(){
 	
-	int ret, pid;
+	int ret, pid = getpid();
 	printf(1, "running testsuite for signals\n\n");
 	
-	/*if(testsigkill1() == -1){
+	if(testsigkill1() == -1){
 		printf(1, "testsigkill1 failed\n");
 		failed++;
 	}
 	
-	/*if(testsigterm() == -1){
+	if(testsigterm() == -1){
 		printf(1, "testsigterm failed\n");
 		failed++;
-	}*/
+	}
 	
 	
 	ret = masktest();
@@ -164,17 +210,22 @@ int main(){
 		failed = failed + ret;
 	}
 		
-	printf(1, "Testing ignored signal - SIGCHLD\n");
-	pid = getpid();
-	Kill(pid, SIGCHLD);
-	printf(1, "SIGCHLD ignored\n");
+	ret = Killtest();
+	if(ret != 0){
+		printf(1, "Killtest failed\n");
+		failed = failed + ret;
+	}
 	
 	if(!testsignal_syscall(pid)){
 		printf(1, "syscall signal() test failed\n");
 		failed++;
 		exit();
 	}
-		
+	
+	if(raisetest()){
+		printf(1, "syscall raise test failed\n");
+		failed++;
+	}	
 	
 	if(failed == 0)
 		printf(1, "All tests passed\n");
