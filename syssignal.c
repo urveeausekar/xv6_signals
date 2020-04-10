@@ -45,7 +45,7 @@ sys_Kill(void)
 }
 
 //FIXME:check if this cast okay
-int
+sighandler_t
 sys_signal(void)
 {
 	int signum;
@@ -54,12 +54,15 @@ sys_signal(void)
 	addr_sigret sigretfn;
 	
 	if(argint(0, &sigretfn1) < 0)
-		return -1;
+		return SIG_ERR;
 	if(argint(1, &signum) < 0)
-		return -1;
+		return SIG_ERR;
 	if(argint(2, &ptr1) < 0)
-		return -1;
+		return SIG_ERR;
 		
+	//cprintf("in syssignal sigretfn is %d\n", sigretfn1);
+	//cprintf("in syssignal signum is %d\n", signum);
+	//cprintf("in syssignal handler is %d\n", ptr1);
 	ptr = (sighandler_t)ptr1;
 	sigretfn = (addr_sigret)sigretfn1;
 	return signal(sigretfn, signum, ptr);

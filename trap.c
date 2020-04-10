@@ -122,9 +122,9 @@ trap(struct trapframe *tf)
   //Check if any signals pending. If yes, deal with them HERE!
  // cprintf("just before checking for signals in trap\n");
   if(myproc() && issig(myproc())){
-  	cprintf("before psig\n");
+  	//cprintf("before psig\n");
   	psig(myproc());
-  	cprintf("after psig\n");
+  	//cprintf("after psig\n");
   }
  // cprintf("Just before return in trap\n");
 }

@@ -674,7 +674,7 @@ int psig(struct proc *p)
   for(i = 0; i < 5; i++){
   	if(((p->sigpending & (1 << coresig[i])) == (1 << coresig[i])) && ((p->sigblocked & (1 << coresig[i])) == 0) && p->allinfo[coresig[i]].disposition == DFL){
   		if(corecalled == 0)
-  			term(p, &corecalled);
+  			core(p, &corecalled);
   		p->sigpending = p->sigpending & (~(1 << coresig[i]));
   	}
   }
@@ -812,27 +812,34 @@ kernel_sigreturn(int signal)
 
 
 // specifies handlers for signals.
-// the returnfn specifies the user address of the systemcall sigreturn, which we will need if we want to execute a user 
-// defined handler
+// the returnfn specifies the user address of the systemcall sigreturn, 
+// which we will need if we want to execute a user defined handler
 // ignores attempt to ignore or set handler for SIGKILL and SIGSTOP
 
-int
+sighandler_t
 signal(addr_sigret returnfn, int signum, sighandler_t handler)
 {
 	if(signum == 0)
-		return -1;
+		return SIG_ERR;
 		
 	if(signum == SIGKILL || signum == SIGSTOP)
-		return 0;
+		return SIG_ERR;
 	
 	struct proc *p = myproc();
 	
 	if(!p)
-		return -1;
+		return SIG_ERR;
+		
+	sighandler_t prev;
+	if(p->allinfo[signum].disposition == USERDEF)
+		prev = p->allinfo[signum].handler;
+	else if(p->allinfo[signum].disposition == IGN)
+		prev = SIG_IGN;
+	else
+		prev = SIG_DFL;
 	
 	acquire(&ptable.lock);
-	
-	//cprintf("In signal, handler is %d,\n", (int)handler);
+
 	
 	p->addr_sigreturn = NULL;
 	if(handler == SIG_IGN){
@@ -840,7 +847,7 @@ signal(addr_sigret returnfn, int signum, sighandler_t handler)
 			p->userdefed = p->userdefed & (~(1 << signum));
 		
 		p->allinfo[signum].disposition = IGN;
-		//cprintf("In IGN\n");
+
 	}
 	else if(handler == SIG_DFL){
 		if(p->allinfo[signum].disposition == USERDEF)
@@ -858,7 +865,7 @@ signal(addr_sigret returnfn, int signum, sighandler_t handler)
 		
 	release(&ptable.lock);
 	//cprintf("before signal return , fn ptr sigreturn is %d\n", p->addr_sigreturn);
-	return 0;
+	return prev;
 }
 
 
@@ -962,7 +969,7 @@ Kill(pid_t pid, int sig)
 	}
 	//cprintf("DISposition is %d\n", p->allinfo[sig].disposition);
 	//cprintf("out of kill\n");
-	cprintf("sigpending is %d\n", p->sigpending);
+	//cprintf("sigpending is %d\n", p->sigpending);
 	return 0;
 	
 	

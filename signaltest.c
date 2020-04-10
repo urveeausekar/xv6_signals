@@ -13,7 +13,7 @@ static int failed = 0;	//keeps track of number of tests failed yet.
 int failedprivate;
 
 void sighuphandler(int signum){
-	printf(1, "In user defined sighup handler.\n");
+	printf(1, "In user defined handler.\n");
 }
 
 void sigsegv_handler(int signum){
@@ -23,9 +23,11 @@ void sigsegv_handler(int signum){
 
 
 int Killtest(){
-	int pid = getpid();
+	int pid = getpid(), pipearr[2];
+	int var = 0;
+	
 	printf(1, "\nTesting systemcall Kill()\n\n");
-	printf(1, "Test1 : Testing a signal that is ignored by default - SIGCHLD\n");
+	printf(1, "Test 1 : Testing a signal that is ignored by default - SIGCHLD\n");
 	
 	Kill(pid, SIGCHLD);
 	printf(1, "Passed\n");
@@ -51,6 +53,31 @@ int Killtest(){
 		wait();
 		printf(1, "Passed\n");
 	}
+	
+	printf(1, "Test 4 : Testing SIGCONT and a signal which causes a process to stop\n");
+	pid = fork();
+	if(pid == 0){
+		int i = 0;
+		while(i < 50)
+			i++;
+		exit();
+		
+	}
+	else{
+		
+		Kill(pid, SIGTSTP);
+		printf(1, "Stopped process with pid %d\n", pid);
+		printf(1, "Resuming process with pid %d\n", pid);
+		Kill(pid, SIGCONT);
+		Kill(pid, SIGKILL);
+		wait();
+		printf(1, "Passed\n");
+	}
+	
+	printf(1, "Test 5: Trying to kill init\n");
+	Kill(1, SIGKILL);
+	printf(1, "Passed\n");
+	
 	return 0;
 }
 
@@ -72,29 +99,48 @@ int testsignal_syscall(int pid){
 	failedprivate = 0;
 	pidtwo = fork();
 	if(pidtwo == 0){
-		printf(1, "Test1 : Checking SIG_IGN\n");
+		printf(1, "Test 1 : Checking SIG_IGN\n");
 		signal(SIGHUP, SIG_IGN);
 		Kill(getpid(), SIGHUP);
 		printf(1, "Passed\n");
-		printf(1, "Test2 : Checking user defined handler\n");
+		printf(1, "Test 2 : Checking user defined handler\n");
 		//printf(1, " In signaltest, Address of function sigreturn is %d\n", sigreturn);
 		//printf(1, "Address of handler is %d\n", sighuphandler);
 		
 		signal(SIGHUP, sighuphandler);
 		Kill(getpid(), SIGHUP);
 		printf(1, "Passed\n");
-		printf(1, "Test3 : Checking SIG_DFL\n");
+		printf(1, "Test 3 : Checking SIG_DFL\n");
 		signal(SIGHUP, SIG_DFL);
 		Kill(getpid(), SIGHUP);
+		//psig should terminate process just after returning from kill. So child should never reach here
+		return 0;
 		
 	}
 	else{
 		wait();
-		return 1;
+		printf(1, "Passed\n");
+		
 	}
-	//psig should terminate process just after returning from kill. So child should never reach here
-
-	return 0;
+	printf(1, "Test 4 : Trying to ignore SIGKILL\n");
+	if(signal(SIGKILL, SIG_IGN) == SIG_ERR)
+		printf(1, "Passed\n");
+		
+	printf(1, "Test 5 : Trying to handle SIGKILL\n");
+	if(signal(SIGKILL, sighuphandler) == SIG_ERR)
+		printf(1, "Passed\n");
+	
+	
+	printf(1, "Test 6 : Trying to ignore SIGSTOP\n");
+	if(signal(SIGSTOP, SIG_IGN) == SIG_ERR)
+		printf(1, "Passed\n");
+		
+	printf(1, "Test 7 : Trying to handle SIGSTOP\n");
+	if(signal(SIGSTOP, sighuphandler) == SIG_ERR)
+		printf(1, "Passed\n");
+		
+	return 1;
+	
 }
 
 
@@ -112,7 +158,7 @@ int masktest(){
 		fail++;
 	}
 	
-	printf(1, "Test2 : non maskable signal - SIGKILL\n");
+	printf(1, "Test 2 : non maskable signal - SIGKILL\n");
 	mask = 0;
 	mask = (1 << SIGKILL);
 	sigsetmask(mask);
@@ -125,7 +171,7 @@ int masktest(){
 	
 	}
 	
-	printf(1, "Test3 : non maskable signal - SIGSTOP\n");
+	printf(1, "Test 3 : non maskable signal - SIGSTOP\n");
 	mask = 0;
 	mask = (1 << SIGSTOP);
 	sigsetmask(mask);
@@ -228,7 +274,7 @@ int main(){
 	}	
 	
 	if(failed == 0)
-		printf(1, "All tests passed\n");
+		printf(1, "\nAll tests passed\n");
 	else
 		printf(1, "Out of 2, %d tests failed\n", failed);
 	

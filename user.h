@@ -26,7 +26,7 @@ char* sbrk(int);
 int sleep(int);
 int uptime(void);
 //111713007 for signal handling
-int signal(int signum, sighandler_t handler);
+sighandler_t signal(int signum, sighandler_t handler);
 int Kill(pid_t pid, int sig);
 int raise(int sig);
 uint sigsetmask(uint mask);

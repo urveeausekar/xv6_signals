@@ -133,7 +133,7 @@ int		restoreuser(uint, uint, uint, uint, uint, uint, uint, uint, uint, uint, uin
 int		issig(struct proc *);
 int		psig(struct proc *);
 int		Kill(int, int);
-int		signal(addr_sigret, int signum, sighandler_t handler);
+sighandler_t	signal(addr_sigret, int signum, sighandler_t handler);
 int		raise(int);
 uint		siggetmask(void);
 uint		sigsetmask(uint);

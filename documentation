@@ -1,29 +1,53 @@
 signal mask:
-	The signal mask is represented by a 32 bit quantity where bit y stands for the signal numbered y. Bit 0 i.e 
-	the LSB is unused. If bit y is 1, then signal number y is masked, otherwise not masked.
+	- The signal mask is represented by a 32 bit quantity where bit y 
+	  stands for the signal numbered y. 
+	- Bit 0 i.e the LSB is unused. If bit y is 1, then signal number y 
+	  is masked, otherwise not masked.
+
 
 uint sigsetmask(uint mask);
-	-To mask signal y , user should first get the current mask using siggetmask, and then set the yth bit of the mask
-	 to 1. Here LSB is considered as bit 0 on the right side. This can be done by logical ORing the current mask with
-	 the current mask with a 32 bit quantity with all bits except the yth bit 0.
-	-Then the result of the logical OR should be given as argument to sigsetmask.
-	-The return value is the new mask.
+	- To mask signal y , user should first get the current mask using 
+	  siggetmask, and then set the yth bit of the mask to 1. 
+	- Here LSB is considered as bit 0 on the right side. 
+	- This can be done by logically ORing the current mask with the current 
+	  mask with a 32 bit quantity with all bits except the yth bit 0.
+	- Then the result of the logical OR should be given as argument to sigsetmask.
+	- The return value is the new mask.
 
 
 uint siggetmask(void);
-	-Returns the current signal mask.
+	- Returns the current signal mask.
 	
 	
 int Kill(pid_t pid, int sig):
-	-sends signal sig to process with id pid.
-	-User process is not permitted to signal a kernel process. Kill ignores the attempt and returns 0.
-	-If anyone tries to signal init, Kill ignores the attempt and returns 0.
-	-If pid is 0 or a negative number other than -1, Kill returns without doing anything, because xv6 doesn't have
-	 process groups.
-	-If signal is 0, no changes in proc of signalled of process, ie no signalling is actually done.
-	-If pid is -1, then every process that the sender is allowed to signal, is signalled.
+	- sends signal sig to process with id pid.
+	- User process is not permitted to signal a kernel process. Kill ignores 
+	  the attempt and returns 0.
+	- If anyone tries to signal init, Kill ignores the attempt and returns 0.
+	- If pid is 0 or a negative number other than -1, Kill returns without 
+	  doing anything, because xv6 doesn't have process groups.
+	- If signal is 0, no changes in proc of signalled of process, ie no signalling
+	  is actually done.
+	- If pid is -1, then every process that the sender is allowed to signal, is signalled.
+	
 	
 void sigreturn(void)
 	- This system call is NEVER to be called by the user.
 	- It is automatically called after the user defined signal handler returns
 	  and is used to restore the context of the user.
+	  
+	  
+sighandler_t signal(int signum, sighandler_t handler)
+	- sets a handler specified by the function pointer handler for signal 
+	  specified by signum.
+	- handler can be SIG_IGN, SIG_DFL, or a user defined handler
+	- SIGKILL and SIGSTOP cannot be ignored or handled.
+	- The previous value of the signal handler is returned, 
+	  or SIG_ERR upon error
+		 
+		 
+int raise(int signum)
+	- The  raise() function sends a signal specified by signum to the calling process.
+	- It returns 0 upon success and -1 on error
+	- f the signal causes a handler to be called, raise() will return 
+	  to user space only after the signal handler has returned.		 
