@@ -17,13 +17,22 @@ void sighuphandler(int signum){
 }
 
 void sigsegv_handler(int signum){
-	printf(1, "Process received an artificial sigsegv due to a raise call\n");
+	printf(1, "Current process received an artificial sigsegv due to a raise call\n");
+}
+
+void sigint_handler(int signum){
+	printf(1, "Signal delivered, currently running user-defined handler\n");
 }
 
 
+void sigusr1_handler(int signum){
+	printf(1, "Currently in user defined handler. About to call systemcall sleep(2)\n");
+	sleep(2);
+	printf(1, "Back in user defined handler. Context restored properly\n");
+}
 
 int Killtest(){
-	int pid = getpid(), pipearr[2];
+	int pid = getpid();
 	int var = 0;
 	
 	printf(1, "\nTesting systemcall Kill()\n\n");
@@ -74,9 +83,32 @@ int Killtest(){
 		printf(1, "Passed\n");
 	}
 	
-	printf(1, "Test 5: Trying to kill init\n");
+	printf(1, "Test 5 : Trying to kill init\n");
 	Kill(1, SIGKILL);
 	printf(1, "Passed\n");
+	
+	printf(1, "Test 6 : Mask a signal, and see if it is delivered\n");
+	pid = fork();
+	if(pid == 0){
+	
+		int mask = siggetmask();
+		sigsetmask(mask | (1 << SIGINT));
+		signal(SIGINT, sigint_handler);
+		Kill(getpid(), SIGINT);
+		printf(1, "Passed\n");
+		printf(1, "Test 7 : Unmask previously masked signal, and see if it is delivered\n");
+		sigsetmask(mask);
+		printf(1, "Passed\n");
+		exit();
+	}
+	else{
+		wait();
+		
+	}
+	
+	printf(1, "Test 8 : Giving Kill invalid values\n");
+	if(Kill(getpid(), 0) == -1)
+		printf(1, "Passed\n");
 	
 	return 0;
 }
@@ -138,6 +170,12 @@ int testsignal_syscall(int pid){
 	printf(1, "Test 7 : Trying to handle SIGSTOP\n");
 	if(signal(SIGSTOP, sighuphandler) == SIG_ERR)
 		printf(1, "Passed\n");
+	
+	printf(1, "Test 8 : User defined handler calling system calls\n");
+	signal(SIGUSR1, sigusr1_handler);
+	Kill(getpid(), SIGUSR1);
+	printf(1, "Passed\n");
+	signal(SIGUSR1, SIG_DFL);
 		
 	return 1;
 	
@@ -237,7 +275,7 @@ int testsigterm(){
 int main(){
 	
 	int ret, pid = getpid();
-	printf(1, "running testsuite for signals\n\n");
+	printf(1, "RUNNING TESTSUITE FOR SIGNALS\n\n");
 	
 	if(testsigkill1() == -1){
 		printf(1, "testsigkill1 failed\n");
