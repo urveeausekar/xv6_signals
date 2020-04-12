@@ -81,3 +81,23 @@ sys_sigreturn(void)
 	//will never return. If it does return, something has gone wrong, so return -1.
 	return -1;
 }
+
+int
+sys_sigblock(void)
+{
+	int signum;
+	if(argint(0, &signum) < 0)
+    		return -1;
+    		
+    	return sigblock(signum);
+}
+
+int
+sys_sigunblock(void)
+{
+	int signum;
+	if(argint(0, &signum) < 0)
+    		return -1;
+    		
+    	return sigunblock(signum);
+}

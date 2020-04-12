@@ -35,8 +35,9 @@ SYSCALL(Kill)
 SYSCALL(raise)
 SYSCALL(sigsetmask)
 SYSCALL(siggetmask)
-#SYSCALL(sigreturn)
-# doesn't seem to be working like this, trying to expand the macro.
+SYSCALL(sigblock)
+SYSCALL(sigunblock)
+
 
 .globl sigreturn;
 sigreturn:

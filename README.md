@@ -18,6 +18,65 @@ Features Added:
 	to jump back into the kernel after the user defined signal handler 
 	has run, and to restore original user context. Therefore, the 
 	user should never actually call the function sigreturn.
+	
+	
+Files Modified :
+
+	defs.h
+	proc.h
+		struct proc modified
+	proc.c
+		- userinit
+		- fork
+		- allocproc
+		- wait
+	sysproc.c
+		- sys_sleep
+	exec.c
+		- exec
+	syscall.c
+	syscall.h
+	user.h
+	usys.S
+		- Standard wrappers for syscalls added.
+		- The wrapper for the syscall signal has been modified to
+		  set up the stack in such a way that allows the signal
+		  trampoline to run later if required.
+	trap.c
+		trap
+	Makefile
+	
+	
+Files Added :
+	signal.h
+		- Contains the signal number definitions, typedefs required for 
+		  signals, etc.
+		- User should include signal.h to access these 
+		  typedefs and functions.
+	signal.c
+		- Contains code for all the system calls, and for 
+		  kernel functions issig and psig
+	syssignal.c
+		- Contains the entry points which are called on syscall,
+		  which in turn call the functions defined in the kernel.
+		- As sysproc.c is for proc.c, so is syssignal.c for signal.c.
+	jmptohandler.S
+		- To jump back to the userspace and to the user defined signal
+		   handler and start running the user-defined handler.
+		- Jumps from kernel mode to user mode. 
+	restoreuser.S
+		- To restore user context after user-defined handler has 
+		  started running and jump to where the user process was
+		  when it was interrupted.
+		- Jumps from kernel mode to user mode.
+	signaltest.c
+		- A test suite to see if the added functions run properly. This is
+		  user space code.
+	documentation
+		- A quick overview of the functionality provided to the user
+		  by the system calls added.
+	
+
 
 
 References
@@ -97,3 +156,9 @@ will need to install a cross-compiler gcc suite capable of producing
 x86 ELF binaries (see https://pdos.csail.mit.edu/6.828/).
 Then run "make TOOLPREFIX=i386-jos-elf-". Now install the QEMU PC
 simulator and run "make qemu".
+
+
+----------------------------------------------------------------------------------
+END OF ORIGINAL README
+----------------------------------------------------------------------------------
+

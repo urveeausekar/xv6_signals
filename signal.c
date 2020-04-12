@@ -255,7 +255,8 @@ int psig(struct proc *p)
 	p->sigpending = p->sigpending & (~(1 << i));
 	release(&ptable.lock);
 	
-	//FIXME : put a synchronise here?
+	__sync_synchronize();
+	
 	jmptohandler(p->allinfo[i].handler, p->tf->cs, p->tf->eflags, p->tf->esp, p->tf->ss);
 
 	}
@@ -512,6 +513,8 @@ sigsetmask(uint mask)
 	
 	if((mask & (1 << SIGKILL)) || (mask & (1 << SIGSTOP)))
 		return 0;
+	if(mask & 1)
+		return 0;
 	
 	struct proc *p = myproc();
 	
@@ -526,4 +529,25 @@ sigsetmask(uint mask)
 	return mask;
 }
 
+// To block 1 particular signal. Easy for user
 
+uint
+sigblock(int sig)
+{
+	if(sig == 0)
+		return 0;
+	uint mask = siggetmask();
+	mask = mask | (1 << sig);
+	return (sigsetmask(mask));
+}
+
+
+uint 
+sigunblock(int sig)
+{
+	if(sig == 0)
+		return 0;
+	uint mask = siggetmask();
+	mask = mask & (~(1 << sig));
+	return (sigsetmask(mask));
+}

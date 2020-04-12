@@ -25,13 +25,17 @@ int getpid(void);
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
+
 //111713007 for signal handling
+
 sighandler_t signal(int signum, sighandler_t handler);
 int Kill(pid_t pid, int sig);
 int raise(int sig);
 uint sigsetmask(uint mask);
 uint siggetmask(void);
-void sigreturn(void); //should never be called by user, only for kernel use
+void sigreturn(void); //sigreturn should never be called by user, only for kernel use
+uint sigblock(int);
+uint sigunblock(int);
 
 
 // ulib.c

@@ -29,6 +29,8 @@ int Kill(pid_t pid, int sig):
 	- If signal is 0, no changes in proc of signalled of process, ie no signalling
 	  is actually done.
 	- If pid is -1, then every process that the sender is allowed to signal, is signalled.
+	- The kernel can recognise ignored signals due to information stored in the struct
+	  proc of the process. Therefore Kill recognises and discards ignored signals.
 	
 	
 void sigreturn(void)
@@ -44,6 +46,10 @@ sighandler_t signal(int signum, sighandler_t handler)
 	- SIGKILL and SIGSTOP cannot be ignored or handled.
 	- The previous value of the signal handler is returned, 
 	  or SIG_ERR upon error
+	- This implementation of signals is reliable. So there is no need to reset the 
+	  the signal handler in a user-defined handler. If a handler that was established 
+	  using signal(), was invoked by the delivery of a signal, the disposition of the 
+	  signal is not reset to SIG_DFL.
 		 
 		 
 int raise(int signum)
