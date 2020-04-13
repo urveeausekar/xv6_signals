@@ -19,6 +19,20 @@ uint siggetmask(void);
 	- Returns the current signal mask.
 	
 	
+uint sigblock(int signum);
+	- Blocks signal with number signum.
+	- Easier for user to use than sigsetmask.
+	- Returns new mask on success, -1 on failure, and returns 0 if signum is
+	  SIGKILL or SIGSTOP. Also returns -1 if signum is an invalid value.
+
+
+uint sigunblock(int signum);
+	- Unblocks signal with number signum.
+	- Easier for user to use than sigsetmask and siggetmask.
+	- Returns new mask on success, -1 on failure, and returns 0 if signum is
+	  SIGKILL or SIGSTOP.  Also returns -1 if signum is an invalid value.
+	
+	
 int Kill(pid_t pid, int sig):
 	- sends signal sig to process with id pid.
 	- User process is not permitted to signal a kernel process. Kill ignores 

@@ -314,11 +314,12 @@ kernel_sigreturn(int signal)
 sighandler_t
 signal(addr_sigret returnfn, int signum, sighandler_t handler)
 {
-	if(signum == 0)
+	if(signum <= 0 || signum > CURRNUM)
 		return SIG_ERR;
 		
 	if(signum == SIGKILL || signum == SIGSTOP)
 		return SIG_ERR;
+	
 	
 	struct proc *p = myproc();
 	
@@ -371,7 +372,7 @@ int
 Kill(pid_t pid, int sig)
 {
 	//cprintf("In kill, start\n");
-	if(sig == 0)
+	if(sig <= 0 || sig > CURRNUM)
 		return -1;
 	
 	if(pid == 1 || pid == 0 || pid < -1)
@@ -478,6 +479,7 @@ Kill(pid_t pid, int sig)
 
 int raise(int sig)
 {
+	//cprintf("in raise\n");
 	struct proc *p = myproc();
 	
 	if(!p)
@@ -507,10 +509,12 @@ siggetmask(void)
 
 // It is not possible to block SIGKILL or SIGSTOP.  
 // Attempts to do so are silently ignored
+// Returns current mask
 uint 
 sigsetmask(uint mask)
 {
 	
+
 	if((mask & (1 << SIGKILL)) || (mask & (1 << SIGSTOP)))
 		return 0;
 	if(mask & 1)
@@ -525,16 +529,21 @@ sigsetmask(uint mask)
 	acquire(&ptable.lock);
 	p->sigblocked = mask;
 	release(&ptable.lock);
-	
 	return mask;
 }
 
 // To block 1 particular signal. Easy for user
+// Both sigblock and sigunblock return current mask
+// Except when argument is SIGKILL or SIGSTOP. Then they return 0.
+// If the value of sig is invalid, -1 is returned.
 
 uint
 sigblock(int sig)
 {
-	if(sig == 0)
+	if(sig <= 0 || sig > CURRNUM)
+		return -1;
+		
+	if(sig == SIGKILL || sig == SIGSTOP)
 		return 0;
 	uint mask = siggetmask();
 	mask = mask | (1 << sig);
@@ -545,7 +554,10 @@ sigblock(int sig)
 uint 
 sigunblock(int sig)
 {
-	if(sig == 0)
+	if(sig <= 0 || sig > CURRNUM)
+		return -1;
+		
+	if(sig == SIGKILL || sig == SIGSTOP)
 		return 0;
 	uint mask = siggetmask();
 	mask = mask & (~(1 << sig));

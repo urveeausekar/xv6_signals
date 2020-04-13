@@ -2,16 +2,18 @@
 
 Project Topic : Implementing signals in xv6.
 
-This project will focus on signals for Inter Process Communication.
+This project focuses on signals for Inter Process Communication.
 
 Features Added:
 	
 	The following system calls have been added :
-		-int Kill(int pid, int signum)
-		-int raise(int signum)
-		-int sigsetmask(int mask)
-		-uint siggetmask()
-		-int signal(int signal, sighandler_t handler)
+		- int Kill(int pid, int signum)
+		- int raise(int signum)
+		- int sigsetmask(int mask)
+		- uint siggetmask()
+		- int signal(int signal, sighandler_t handler)
+		- uint sigblock(int signum)
+		- uint sigunblock(int signum)
 		
 	There is another systemcall implemented , i.e void sigreturn(), 
 	but this is a part of the signal trampoline, i.e the code used 

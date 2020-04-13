@@ -31,6 +31,89 @@ void sigusr1_handler(int signum){
 	printf(1, "Back in user defined handler. Context restored properly\n");
 }
 
+
+int blocktest(){
+	printf(1, "\nTesting sigblock() and sigunblock()\n");
+	uint mask = siggetmask(), ret = 0;
+	int pid = fork();
+	
+	if(pid == 0){
+	
+		printf(1, "Test 1 : testing sigblock()\n");
+		if(sigblock(SIGTERM) == (mask | (1 << SIGTERM)))
+			raise(SIGTERM);
+		else{
+			printf(1, "Failed\n");
+			sigsetmask(mask);
+			exit();
+		}
+		printf(1, "Passed\n");
+		
+		printf(1, "Test 2 : testing sigunblock\n");
+		if(sigunblock(SIGTERM) == mask)
+			printf(1,"Passed\n");
+		else{
+			printf(1, "Failed\n");
+			sigsetmask(mask);
+			exit();
+		}
+	}
+	else{
+		wait();
+		printf(1, "Passed\n");
+		
+		printf(1, "Test 3 : trying to block sigkill\n");
+		
+		if(sigblock(SIGKILL)){
+			printf(1, "Failed");
+			ret++;
+		}
+		else
+			printf(1, "Passed\n");
+			
+		printf(1, "Test 4 : trying to block sigstop\n");
+		
+		if(sigblock(SIGSTOP)){
+			printf(1, "Failed");
+			ret++;
+		}
+		else
+			printf(1, "Passed\n");
+			
+		printf(1, "Test 5 : testing validation of input\n");
+		
+		if(sigblock(0) == -1)
+			printf(1, "5.1 Passed\n");
+		else
+			printf(1, "5.1 Failed\n");
+			
+		if(sigblock(-24) == -1)
+			printf(1, "5.2 Passed\n");
+		else
+			printf(1, "5.2 Failed\n");
+			
+		if(sigblock(300) == -1)
+			printf(1, "5.3 Passed\n");
+		else
+			printf(1, "5.3 Failed\n");
+			
+		if(sigblock(25) == -1)
+			printf(1, "5.4 Passed\n");
+		else
+			printf(1, "5.4 Failed\n");	
+				
+			return ret;
+		
+	}
+	//child will never reach here, but in case it does, then something went wrong
+	return -1;
+	
+	
+}
+
+
+
+
 int Killtest(){
 	int pid = getpid();
 	int var = 0;
@@ -106,10 +189,27 @@ int Killtest(){
 		
 	}
 	
-	printf(1, "Test 8 : Giving Kill invalid values\n");
+	printf(1, "Test 8 : Giving Kill invalid signal values\n");
 	if(Kill(getpid(), 0) == -1)
-		printf(1, "Passed\n");
-	
+		printf(1, "8.1 Passed\n");
+	else
+		printf(1, "8.1 Failed\n");
+		
+	if(Kill(getpid(), -24) == -1)
+		printf(1, "8.2 Passed\n");
+	else
+		printf(1, "8.2 Failed\n");
+		
+	if(Kill(getpid(), 300) == -1)
+		printf(1, "8.3 Passed\n");
+	else
+		printf(1, "8.3 Failed\n");
+		
+	if(Kill(getpid(), 25) == -1)
+		printf(1, "8.4 Passed\n");
+	else
+		printf(1, "8.4 Failed\n");	
+		
 	return 0;
 }
 
@@ -176,6 +276,30 @@ int testsignal_syscall(int pid){
 	Kill(getpid(), SIGUSR1);
 	printf(1, "Passed\n");
 	signal(SIGUSR1, SIG_DFL);
+	
+	printf(1, "Test 9 : Giving invalid values as arguments to signal\n");
+	
+	if(signal(0, SIG_DFL) == SIG_ERR)
+		printf(1, "9.1 Passed\n");
+	else
+		printf(1, "9.1 Failed\n");
+		
+	if(signal(-24, SIG_DFL) == SIG_ERR)
+		printf(1, "9.2 Passed\n");
+	else
+		printf(1, "9.2 Failed\n");
+		
+	if(signal(300, SIG_DFL) == SIG_ERR)
+		printf(1, "9.3 Passed\n");
+	else
+		printf(1, "9.3 Failed\n");
+		
+	if(signal(25, SIG_DFL) == SIG_ERR)
+		printf(1, "9.4 Passed\n");
+	else
+		printf(1, "9.4 Failed\n");
+	
+		
 		
 	return 1;
 	
@@ -293,7 +417,13 @@ int main(){
 		printf(1, "masktest failed\n");
 		failed = failed + ret;
 	}
-		
+	
+	ret = blocktest();
+	if(ret != 0){
+		printf(1, "blocktest failed\n");
+		failed = failed + ret;
+	}
+	
 	ret = Killtest();
 	if(ret != 0){
 		printf(1, "Killtest failed\n");
@@ -314,7 +444,7 @@ int main(){
 	if(failed == 0)
 		printf(1, "\nAll tests passed\n");
 	else
-		printf(1, "Out of 2, %d tests failed\n", failed);
+		printf(1, "Out of 7 main tests, %d tests failed\n", failed);
 	
 	exit();
 }

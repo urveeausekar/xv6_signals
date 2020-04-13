@@ -138,6 +138,8 @@ int		raise(int);
 uint		siggetmask(void);
 uint		sigsetmask(uint);
 void		kernel_sigreturn(int);
+uint		sigblock(int);
+uint		sigunblock(int);
 
 // swtch.S
 void            swtch(struct context**, struct context*);

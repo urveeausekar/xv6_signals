@@ -37,7 +37,8 @@
 
 
 
-#define NUMSIG 32 //maximum number of signals supported
+#define NUMSIG 32	//maximum number of signals supported
+#define CURRNUM 22	//maximum number of signals currently supported
 
 typedef int pid_t;
 
