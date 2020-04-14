@@ -1,3 +1,8 @@
+// IMPORTANT NOTE: This is just a prototype, which is unused
+// The actual definitions and typedefs for signalts are in 
+// proc.h and signal.h
+// -----------------------------------------------------------
+
 #include"signal.h"
 
 // Per-CPU state
