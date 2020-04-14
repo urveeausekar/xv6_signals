@@ -96,6 +96,7 @@ How to build, run and test the project using qemu:
 Requirements: qemu, make
 
 In the folder which contains all the source files, run the following commands:
+
 	1) make
 	2) make qemu
 	
