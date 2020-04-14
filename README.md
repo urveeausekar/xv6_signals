@@ -90,8 +90,9 @@ References
 	4) manual pages for signal(3), raise, kill(2), etc.
 	5) http://courses.cms.caltech.edu/cs124/lectures/ (especially lecture 15)
 	
-	
+-------------------------------------------------------------------------------------	
 How to build, run and test the project using qemu:
+-------------------------------------------------------------------------------------
 
 Requirements: qemu, make
 
@@ -107,11 +108,11 @@ In the folder which contains all the source files, run the following commands:
 	This will cause the testing code for signals to run.
 	
 
+------------------------------------------------------------------------------------
 
-
-----------------------------------------------------------------------------------
+------------------------------------------------------------------------------------
 The Original README
-----------------------------------------------------------------------------------
+------------------------------------------------------------------------------------
 
 xv6 is a re-implementation of Dennis Ritchie's and Ken Thompson's Unix
 Version 6 (v6).  xv6 loosely follows the structure and style of v6,

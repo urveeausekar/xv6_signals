@@ -12,7 +12,24 @@
 
 
 int main(){
-	printf(1, "Size of integer is : %d\n", sizeof(int));
-	printf(1, "Size of function pointer is : %d\n", sizeof(sighandler_t));
+	int pid = fork();
+	int i = 0;
+	if(pid == 0){
+		sleep(1);
+		while(i < 200){
+			printf(1, "%d ", i);
+			i++;
+		}
+		exit();
+	}
+	else{
+		sleep(2);
+		printf(1, "\nPausing process with pid %d\n", pid);
+		Kill(pid, SIGTSTP);
+		sleep(1);
+		Kill(pid, SIGCONT);
+		printf(1, "\nResuming process with pid %d\n", pid);
+		wait();
+	}
 	exit();
 }
