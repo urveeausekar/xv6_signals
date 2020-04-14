@@ -18,8 +18,6 @@ extern sighandler_t sigreturn;
 extern struct proctable ptable;
 
 
-// Code for signal handling
-
 
 int def_disposition[32] = {0, TERM, TERM, CORE, CORE, 0, CORE, 0, CORE, TERM, TERM, CORE, TERM, TERM, TERM, TERM, 0, IGNORE, CONT, STOP, STOP, STOP, STOP};
 
@@ -100,23 +98,21 @@ term(struct proc *q, int * done)
 }
 
 
-//FIXME:
-// No, process won't ever be scheduled because it is sleeping, so psig never called on a sleeping process
-// So, Kill must alter state of process and make it runnable, not cont.
+
+// No, process won't ever be scheduled because it is sleeping,
+// so psig never called on a sleeping process
+// So, Kill must alter state of process and make it runnable, not cont
 void
-cont(struct proc *q)
+cont(struct proc *p)
 {
-	struct proc *p;
-	for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-		if(p->pid == q->pid)
-		{
-			if(p->state == SLEEPING)
-			{
-				p->state = RUNNABLE;
-				p->justwoken = 1;
-			}
-			break;
-		}
+		
+	if(p->state == SLEEPING)
+	{
+		p->state = RUNNABLE;
+		p->justwoken = 1;
+	}
+			
+		
 }
 
 void
@@ -139,7 +135,6 @@ int psig(struct proc *p)
   
   
 	int i;
-	//cprintf("in psig\n");
 	int stopsig[4] = {19, 20, 21, 22};
 	int coresig[5] = {SIGQUIT, SIGABRT, SIGILL, SIGFPE, SIGSEGV};
 	int termsig[7] = {SIGHUP, SIGINT, SIGPIPE, SIGALRM, SIGTERM, SIGUSR1, SIGUSR2};
@@ -217,13 +212,12 @@ int psig(struct proc *p)
 		return 1;
 	}
 	else{
-		//cprintf("About to go to user defined handler\n");
 		for(i = 1; i < 32; i++){
 			if((p->userdefed & (1 << i)) == (1 << i))
 				break;		
 			//i is the signal number that is pending
 		}
-		//cprintf("Found i is %d\n", i);
+
 
 	*(uint *)((p->tf->esp) - 4) = p->tf->ss;
 	*(uint *)((p->tf->esp) - 8) = p->tf->esp;
@@ -246,21 +240,18 @@ int psig(struct proc *p)
 
 	*(uint *)((p->tf->esp) - 72) = i;
 	*(uint *)((p->tf->esp) - 76) = (uint)p->addr_sigreturn;
-
-	//Now we push to current stack things so that iret takes us back to level3
 	p->tf->esp = p->tf->esp - 76;
-	//cprintf("Here \n");
-	//cprintf(" in psig, printing: ss = %d, esp = %d, flag = %d, cs = %d, handler ptr = %d\n", p->tf->ss, p->tf->esp, p->tf->eflags,  p->tf->cs, p->allinfo[i].handler);
 	
 	p->sigpending = p->sigpending & (~(1 << i));
 	release(&ptable.lock);
 	
 	__sync_synchronize();
 	
+	//jmptohandler jumps back to user space and starts running the user defined handler
 	jmptohandler(p->allinfo[i].handler, p->tf->cs, p->tf->eflags, p->tf->esp, p->tf->ss);
 
 	}
-	//won't reach here. But still.
+	//won't reach here. But for the sake of completeness.
 	return -1;
 
  
@@ -273,7 +264,7 @@ int psig(struct proc *p)
 void
 kernel_sigreturn(int signal)
 {
-	//cprintf("In kernelsigreturn\n");
+	
 	struct proc *p = myproc();
 	if(!p)
 		return;
@@ -281,7 +272,7 @@ kernel_sigreturn(int signal)
 	uint cs, ds, es, ss, fs, gs;
 	uint eax, ebx, ecx, edx, esi, edi, esp, ebp, oesp, eip, eflag;
   	
-  	esp = p->tf->esp;	//This is current userstack esp, which currently points to sinum argument of user handler
+  	esp = p->tf->esp;	//This is current userstack esp, which currently points to signum argument of user handler
   	edi = *(uint *)(esp + 4);
   	esi = *(uint *)(esp + 8);
   	ebp = *(uint *)(esp + 12);
@@ -360,18 +351,19 @@ signal(addr_sigret returnfn, int signum, sighandler_t handler)
 	}
 		
 	release(&ptable.lock);
-	//cprintf("before signal return , fn ptr sigreturn is %d\n", p->addr_sigreturn);
 	return prev;
 }
 
 
 
-//In unix, we check user id, etc, but in xv6 no such distinctions - every process runs as root. 
-//Therefore forbid user processes from signalling kernel processes, and forbid everyone from signalling init.
+// In unix, we check user id, etc, but in xv6 no such distinctions 
+// - every process runs as root. 
+// Therefore forbid user processes from signalling kernel processes,
+// and forbid everyone from signalling init.
 int 
 Kill(pid_t pid, int sig)
 {
-	//cprintf("In kill, start\n");
+
 	if(sig <= 0 || sig > CURRNUM)
 		return -1;
 	
@@ -410,15 +402,16 @@ Kill(pid_t pid, int sig)
 					return 0;
 			}
     	
-	    		//if sig is sigkill, immediately set process to zombie
-			//SIGKILL is generated under some unusual conditions where the program cannot possibly continue to run,
-			//(even to run a signal handler), so terminate it here instead of waiting for sigkilled process to run.
+	    		// if sig is sigkill, immediately set process to zombie
+			// SIGKILL is generated under some unusual conditions where
+			// the program cannot possibly continue to run,
+			//(even to run a signal handler), so terminate it here 
+			// instead of waiting for sigkilled process to run.
 				
 			acquire(&ptable.lock);
 			
 			if(sig == SIGKILL){
-				/*p->state = RUNNABLE;
-				p->killed = 1;*/
+	
 				release(&ptable.lock);
 				kill(p->pid);
 				
@@ -432,18 +425,21 @@ Kill(pid_t pid, int sig)
 				if(minusone)
 					continue;
 				else{
-					
-					//cprintf("Sigchld disposition is %d\n", p->allinfo[sig].disposition);
-					//cprintf("out of kill\n");
-					//cprintf("sigpending is %d\n", p->sigpending);
 					return 0;
 					
 				}
 			}
-			else if(sig == SIGCONT && p->allinfo[SIGCONT].disposition == DFL){
+			else if(sig == SIGCONT){
+				
+				// sigcont must be dealt with here,
+				// otherwise the process will never be scheduled
+				
 				if(p->state == SLEEPING){
 					p->state = RUNNABLE;
 					p->justwoken = 1;
+				}
+				if(p->allinfo[SIGCONT].disposition != DFL && p->allinfo[SIGCONT].disposition != IGN){
+					p->sigpending = p->sigpending | (1 << sig);
 				}
 				release(&ptable.lock);
 				if(minusone)
@@ -454,8 +450,6 @@ Kill(pid_t pid, int sig)
 			}
 	    	
 			if(p->allinfo[sig].disposition != IGN && sig != 0){
-				//cprintf("DISposition is %d\n", p->allinfo[sig].disposition);
-				//cprintf("in setting : sigpending is %d\n", p->sigpending);
 				p->sigpending = p->sigpending | (1 << sig);
 			}
 
@@ -466,9 +460,7 @@ Kill(pid_t pid, int sig)
     	
 		}
 	}
-	//cprintf("DISposition is %d\n", p->allinfo[sig].disposition);
-	//cprintf("out of kill\n");
-	//cprintf("sigpending is %d\n", p->sigpending);
+	
 	return 0;
 	
 	
@@ -479,7 +471,6 @@ Kill(pid_t pid, int sig)
 
 int raise(int sig)
 {
-	//cprintf("in raise\n");
 	struct proc *p = myproc();
 	
 	if(!p)
@@ -515,7 +506,7 @@ sigsetmask(uint mask)
 {
 	
 
-	if((mask & (1 << SIGKILL)) || (mask & (1 << SIGSTOP)))
+	if((mask & (1 << SIGKILL)) || (mask & (1 << SIGSTOP)) || (mask & (1 << SIGCONT)))
 		return 0;
 	if(mask & 1)
 		return 0;
@@ -534,7 +525,7 @@ sigsetmask(uint mask)
 
 // To block 1 particular signal. Easy for user
 // Both sigblock and sigunblock return current mask
-// Except when argument is SIGKILL or SIGSTOP. Then they return 0.
+// Except when argument is SIGKILL or SIGSTOP or SIGCONT. Then they return 0.
 // If the value of sig is invalid, -1 is returned.
 
 uint
@@ -543,7 +534,7 @@ sigblock(int sig)
 	if(sig <= 0 || sig > CURRNUM)
 		return -1;
 		
-	if(sig == SIGKILL || sig == SIGSTOP)
+	if(sig == SIGKILL || sig == SIGSTOP || sig == SIGCONT)
 		return 0;
 	uint mask = siggetmask();
 	mask = mask | (1 << sig);

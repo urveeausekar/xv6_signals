@@ -61,7 +61,7 @@ sys_sleep(void)
 {
   int n;
   uint ticks0;
-  //struct proc *p = myproc();
+  
 
   if(argint(0, &n) < 0)
     return -1;
@@ -78,6 +78,10 @@ sys_sleep(void)
       
     sleep(&ticks, &tickslock);
   }
+  
+  if(myproc() && issig(myproc()))
+      psig(myproc());
+      
   release(&tickslock);
   return 0;
 }

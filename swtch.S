@@ -21,7 +21,6 @@ swtch:
   movl %esp, (%eax)
   movl %edx, %esp
 
-	#here do the psig thing	
 	
   # Load new callee-saved registers
   popl %edi

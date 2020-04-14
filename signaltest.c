@@ -9,7 +9,9 @@
 #include "memlayout.h"
 #include "signal.h"
 
-static int failed = 0;	//keeps track of number of tests failed yet.
+static int failed = 0;	
+// failed keeps track of number of tests failed yet,
+// when this is possible.
 int failedprivate;
 
 void sighuphandler(int signum){
@@ -24,6 +26,11 @@ void sigint_handler(int signum){
 	printf(1, "Signal delivered, currently running user-defined handler\n");
 }
 
+
+void sigcont_handler(int signum){
+	printf(1, "Sigcont delivered, in user-defined sigcont handler\n");
+	printf(1, "Passed\n");
+}
 
 void sigusr1_handler(int signum){
 	printf(1, "Currently in user defined handler. About to call systemcall sleep(2)\n");
@@ -102,7 +109,7 @@ int blocktest(){
 		else
 			printf(1, "5.4 Failed\n");	
 				
-			return ret;
+		return ret;
 		
 	}
 	//child will never reach here, but in case it does, then something went wrong
@@ -116,7 +123,6 @@ int blocktest(){
 
 int Killtest(){
 	int pid = getpid();
-	int var = 0;
 	
 	printf(1, "\nTesting systemcall Kill()\n\n");
 	printf(1, "Test 1 : Testing a signal that is ignored by default - SIGCHLD\n");
@@ -236,8 +242,7 @@ int testsignal_syscall(int pid){
 		Kill(getpid(), SIGHUP);
 		printf(1, "Passed\n");
 		printf(1, "Test 2 : Checking user defined handler\n");
-		//printf(1, " In signaltest, Address of function sigreturn is %d\n", sigreturn);
-		//printf(1, "Address of handler is %d\n", sighuphandler);
+		
 		
 		signal(SIGHUP, sighuphandler);
 		Kill(getpid(), SIGHUP);
@@ -299,6 +304,12 @@ int testsignal_syscall(int pid){
 	else
 		printf(1, "9.4 Failed\n");
 	
+	
+	printf(1, "Test 10 : Testing SIGCONT handlers\n");	
+	signal(SIGCONT, sigcont_handler);
+	raise(SIGCONT);
+	signal(SIGCONT, SIG_DFL);
+	
 		
 		
 	return 1;
@@ -309,7 +320,8 @@ int testsignal_syscall(int pid){
 int masktest(){
 	uint mask;
 	int fail = 0;
-	mask = ((1 << SIGHUP) | (1 << SIGINT));		//block sighup and sigint (for example)
+	//block sighup and sigint (for example)
+	mask = ((1 << SIGHUP) | (1 << SIGINT));		
 	printf(1, "\ntesting sigsetmask and siggetmask\n\n");
 	printf(1, "Test1 : checking normal functionality\n");
 	sigsetmask(mask);
@@ -346,6 +358,19 @@ int masktest(){
 	
 	}
 	
+	printf(1, "Test 4 : non maskable signal - SIGCONT\n");
+	mask = 0;
+	mask = (1 << SIGCONT);
+	sigsetmask(mask);
+	if(siggetmask() == mask){
+		printf(1, "Failed test4\n");
+		fail++;
+	}
+	else{
+		printf(1, "Passed test4\n");
+	
+	}
+	
 	sigsetmask(0);
 	return fail;
 		
@@ -359,7 +384,6 @@ int testsigkill1(){
 	printf(1, "\ntesting SIGKILL\n\n");
 	pid = fork();
 	if(pid == 0){
-		//printf(1, "in child");
 		while(1)
 			;
 		exit();
@@ -399,7 +423,7 @@ int testsigterm(){
 int main(){
 	
 	int ret, pid = getpid();
-	printf(1, "RUNNING TESTSUITE FOR SIGNALS\n\n");
+	printf(1, "\nRUNNING TESTSUITE FOR SIGNALS\n\n");
 	
 	if(testsigkill1() == -1){
 		printf(1, "testsigkill1 failed\n");
@@ -444,7 +468,7 @@ int main(){
 	if(failed == 0)
 		printf(1, "\nAll tests passed\n");
 	else
-		printf(1, "Out of 7 main tests, %d tests failed\n", failed);
+		printf(1, "%d tests failed partially \n", failed);
 	
 	exit();
 }

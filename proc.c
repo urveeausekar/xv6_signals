@@ -466,9 +466,7 @@ sleep(void *chan, struct spinlock *lk)
     release(lk);
   }
   
-  //Check if any signals pending. If yes, deal with them
-	//if(issig(p))
-	//	psig(p);
+  
   // Go to sleep.
   p->chan = chan;
   p->state = SLEEPING;

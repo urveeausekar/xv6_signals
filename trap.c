@@ -36,7 +36,7 @@ idtinit(void)
 void
 trap(struct trapframe *tf)
 {
-  //struct proc *p = myproc();
+  
   if(tf->trapno == T_SYSCALL){
     if(myproc()->killed)
       exit();
@@ -45,7 +45,7 @@ trap(struct trapframe *tf)
     
     //Check if any signals pending. If yes, deal with them
     if(myproc() && issig(myproc()))
-    	psig(myproc()); //HERE!!! 111713007
+    	psig(myproc());
     if(myproc()->killed)
       exit();
 
@@ -110,21 +110,17 @@ trap(struct trapframe *tf)
   // If interrupts were on while locks held, would need to check nlock.
   if(myproc() && myproc()->state == RUNNING &&
      tf->trapno == T_IRQ0+IRQ_TIMER){
-    //cprintf("before yield\n");
     yield();
-     //cprintf("after yield\n");
+    
    }
 
   // Check if the process has been killed since we yielded
   if(myproc() && myproc()->killed && (tf->cs&3) == DPL_USER)
     exit();
     
-  //Check if any signals pending. If yes, deal with them HERE!
- // cprintf("just before checking for signals in trap\n");
+  //Check if any signals pending. If yes, deal with them
   if(myproc() && issig(myproc())){
-  	//cprintf("before psig\n");
   	psig(myproc());
-  	//cprintf("after psig\n");
+ 
   }
- // cprintf("Just before return in trap\n");
 }

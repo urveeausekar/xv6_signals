@@ -46,11 +46,6 @@ typedef void (*sighandler_t)(int);
 typedef void (*addr_sigret)(void);
 
 
-typedef struct signinfo {
-  //int signum;		//number of the sent signal
-  pid_t from_pid;	//signal sent by which process? Its pid
-  uint from_ecx;	//ecx of the signal that sent the signal
-}siginfo;
 
 typedef struct handlerinfo {
 	//int signum
